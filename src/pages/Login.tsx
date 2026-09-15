@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAppStore } from '../store/useAppStore';
-import { Shield } from 'lucide-react';
+import { Rocket, Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -22,11 +22,11 @@ export const Login: React.FC = () => {
     setMessage(null);
 
     try {
-      if (!supabase) throw new Error('Supabase client is not initialized.');
+      if (!supabase) throw new Error('تعذّر الاتصال بقاعدة البيانات.');
       
-      if (isSignUp) {
+      if (mode === 'signup') {
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
         });
 
@@ -36,15 +36,20 @@ export const Login: React.FC = () => {
           await init();
           navigate('/');
         } else {
-          setMessage('Account created successfully! If email confirmation is enabled, please check your inbox.');
+          setMessage('تم إنشاء الحساب بنجاح! إذا كان تأكيد البريد مفعلًا، يُرجى مراجعة صندوق الوارد.');
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
 
-        if (signInError) throw signInError;
+        if (signInError) {
+          if (signInError.message.includes('Invalid login credentials')) {
+            throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة. إذا لم تكن تملك حساباً، اختر "حساب جديد".');
+          }
+          throw signInError;
+        }
 
         if (data.session) {
           await init();
@@ -52,95 +57,145 @@ export const Login: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(err.message || 'حدث خطأ أثناء المصادقة');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8 bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
-            <Shield className="w-8 h-8 text-blue-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">HARAKA Command Center</h2>
-          <p className="text-slate-400 mt-2 text-sm">
-            {isSignUp ? 'Create a new account to get started' : 'Sign in to access your startup dashboard'}
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 selection:bg-blue-500 selection:text-white dir-rtl">
+      {/* Background glow effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl" />
+      </div>
 
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-sm text-red-400">
-            {error}
-          </div>
-        )}
-
-        {message && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 text-sm text-emerald-400">
-            {message}
-          </div>
-        )}
-
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1" htmlFor="email">
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-              placeholder="founder@haraka.app"
-            />
+      <div className="w-full max-w-md relative z-10">
+        {/* Main Card */}
+        <div className="bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-800 shadow-2xl shadow-blue-950/30">
+          
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white mb-4 shadow-lg shadow-blue-500/25">
+              <Rocket className="w-7 h-7" />
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              HARAKA Command Center
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">
+              مركز تسيير عمليات شركة HARAKA
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1" htmlFor="password">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading 
-              ? (isSignUp ? 'Creating account...' : 'Signing in...') 
-              : (isSignUp ? 'Create Account' : 'Sign in')}
-          </button>
-
-          <div className="text-center pt-2">
+          {/* Mode Tabs */}
+          <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-xl mb-6 border border-slate-800/80">
             <button
               type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError(null);
-                setMessage(null);
-              }}
-              className="text-sm text-blue-400 hover:text-blue-300 underline focus:outline-none"
+              onClick={() => { setMode('signin'); setError(null); setMessage(null); }}
+              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === 'signin'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
             >
-              {isSignUp 
-                ? 'Already have an account? Sign In' 
-                : "Don't have an account? Sign Up"}
+              <LogIn className="w-4 h-4" />
+              تسجيل الدخول
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(null); setMessage(null); }}
+              className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
+                mode === 'signup'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              حساب جديد
             </button>
           </div>
-        </form>
+
+          {/* Alerts */}
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {message && (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
+              <span>{message}</span>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                البريد الإلكتروني
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  dir="ltr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="founder@haraka.app"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-11 pl-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                كلمة المرور
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  dir="ltr"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-11 pl-4 py-3 text-white placeholder-slate-600 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium rounded-xl shadow-lg shadow-blue-600/25 transition-all duration-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : mode === 'signin' ? (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  دخول
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  إنشاء حساب جديد
+                </>
+              )}
+            </button>
+          </form>
+
+        </div>
       </div>
     </div>
   );
