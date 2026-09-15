@@ -57,7 +57,12 @@ export const Login: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء المصادقة');
+      const errMsg = err.message || '';
+      if (errMsg.toLowerCase().includes('rate limit')) {
+        setError('تم تجاوز الحد الأقصى لإرسال رسائل التأكيد مؤقتاً من Supabase. يرجى الانتظار دقائق قليلة، أو جرب الانتقال لتبويب "تسجيل الدخول" إن كان الحساب قد أُنشئ.');
+      } else {
+        setError(errMsg || 'حدث خطأ أثناء المصادقة');
+      }
     } finally {
       setLoading(false);
     }
