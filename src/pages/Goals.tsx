@@ -102,8 +102,17 @@ export function Goals() {
           );
         })}
         {filteredGoals.length === 0 && (
-          <div className="col-span-full py-12 text-center text-slate-500 bg-slate-50 rounded-lg border border-dashed">
-            لا توجد أهداف مطابقة للفلتر الحالي.
+          <div className="col-span-full py-16 flex flex-col items-center justify-center gap-4 text-center bg-slate-50 rounded-xl border-2 border-dashed">
+            <div className="bg-primary/10 p-3 rounded-full">
+              <Target className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-slate-800">لا توجد أهداف بعد</p>
+              <p className="text-sm text-muted-foreground mt-1">قم بإنشاء هدفك الأول للبدء في تتبع التقدم.</p>
+            </div>
+            <button className="mt-2 bg-primary text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-primary/90">
+              <Plus className="h-4 w-4" /> هدف جديد
+            </button>
           </div>
         )}
       </div>

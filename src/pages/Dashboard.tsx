@@ -1,27 +1,35 @@
 import { useAppStore } from '../store';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Activity, AlertCircle, TrendingUp, TrendingDown, DollarSign, Rocket, AlertTriangle, Scale, Target, Users, Wallet, ShieldAlert } from 'lucide-react';
+import { 
+  Activity, AlertCircle, TrendingUp, DollarSign, Rocket, AlertTriangle, 
+  Target, Users, Wallet, ShieldAlert, HeartPulse, CheckSquare, Briefcase, Zap,
+  LineChart
+} from 'lucide-react';
 import { Progress } from '../components/ui/progress';
 import { Link } from 'react-router-dom';
 
 export function Dashboard() {
   const { 
     config, ceoNextMove, financeSummary, productReadinessPct, launchReadinessPct,
-    launchBlockers, risks, incubationPhase, deliverables, decisions, kpis, marketKPIs,
-    financialControl, governanceSignals
+    launchBlockers, risks, kpis, marketKPIs, financialControl, companyHealth,
+    tasks, projects, goals, initiatives, leads, opportunities, pilots, customers, revenues
   } = useAppStore();
 
   if (!config || !financeSummary || !marketKPIs) return null;
 
-  const criticalBlockersCount = launchBlockers.filter(b => b.status !== 'Resolved' && b.severity === 'Critical').length;
+  const criticalBlockers = launchBlockers.filter(b => b.status !== 'Resolved' && b.severity === 'Critical');
   const activeHighRisks = risks.filter(r => r.status === 'Open' && (r.severity === 'Critical' || r.severity === 'High'));
+  const criticalTasks = tasks.filter(t => t.status !== 'Done' && t.priority === 'P1 (High)'); // Using P1 (High) as high priority in tasks
+
+  const financialWarning = financialControl?.signals.find(s => s.severity === 'Critical' || s.severity === 'High');
 
   return (
-    <div className="space-y-6 max-w-screen-xl">
+    <div className="space-y-8 max-w-screen-xl">
+      {/* 1. Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">لوحة تحكم المؤسس</h1>
+          <h1 className="text-2xl font-bold tracking-tight">لوحة التحكم التنفيذية</h1>
           <p className="text-sm text-muted-foreground">{config.name} - مركز القيادة</p>
         </div>
         <div className="flex items-center gap-3">
@@ -34,253 +42,224 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* CEO Next Move */}
+      {/* 2. CEO Next Move */}
       {ceoNextMove && ceoNextMove.hasEnoughData && (
-        <Card className="border-primary/20 bg-primary/5 shadow-sm">
+        <Card className="border-primary/30 bg-primary/5 shadow-md">
           <CardHeader className="pb-3 border-b border-primary/10">
-            <div className="flex items-center gap-2 text-primary">
-              <Activity className="h-5 w-5" />
-              <CardTitle className="text-lg">الخطوة القادمة للمدير التنفيذي</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-primary">
+                <Activity className="h-5 w-5" />
+                <CardTitle className="text-lg">الخطوة القادمة للمؤسس (CEO Next Move)</CardTitle>
+              </div>
+              <Badge variant="outline" className="border-primary/50 text-primary">أولوية قصوى</Badge>
             </div>
           </CardHeader>
           <CardContent className="pt-4 grid gap-4 md:grid-cols-2">
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider">التركيز الأساسي</p>
-                <p className="text-sm font-medium mt-1 bg-background p-2 rounded border">{ceoNextMove.priority1}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider">التركيز الثانوي</p>
-                <p className="text-sm text-muted-foreground mt-1 bg-background p-2 rounded border">{ceoNextMove.priority2}</p>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">السبب / التركيز الأساسي</p>
+                <p className="text-sm font-medium bg-background p-3 rounded-lg border border-primary/20 shadow-sm">{ceoNextMove.priority1}</p>
               </div>
             </div>
             <div className="space-y-4">
               <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider">القرار المقترح</p>
-                <p className="text-sm font-medium mt-1 bg-background p-2 rounded border border-primary/30">{ceoNextMove.decision}</p>
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">الإجراء المقترح</p>
+                <p className="text-sm font-medium bg-primary text-primary-foreground p-3 rounded-lg shadow-sm">{ceoNextMove.decision}</p>
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">درجة الخطورة (Risk)</p>
+              <div className="flex items-start gap-2 bg-background p-3 rounded-lg border border-destructive/30">
+                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive font-medium leading-tight">{ceoNextMove.risk}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 3. Critical Alerts */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-destructive" /> تنبيهات حرجة
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className={criticalTasks.length > 0 ? 'border-destructive bg-destructive/5' : ''}>
+            <CardContent className="pt-6">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">مهام حرجة متأخرة</p>
+              <p className="text-3xl font-bold text-destructive">{criticalTasks.length}</p>
+            </CardContent>
+          </Card>
+          
+          <Card className={criticalBlockers.length > 0 ? 'border-destructive bg-destructive/5' : ''}>
+            <CardContent className="pt-6">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">عوائق إطلاق حرجة</p>
+              <p className="text-3xl font-bold text-destructive">{criticalBlockers.length}</p>
+            </CardContent>
+          </Card>
+
+          <Card className={activeHighRisks.length > 0 ? 'border-amber-500 bg-amber-500/5' : ''}>
+            <CardContent className="pt-6">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">مخاطر عالية نشطة</p>
+              <p className="text-3xl font-bold text-amber-600">{activeHighRisks.length}</p>
+            </CardContent>
+          </Card>
+
+          <Card className={financialWarning ? 'border-destructive bg-destructive/5' : ''}>
+            <CardContent className="pt-6">
+              <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">تنبيه مالي</p>
+              {financialWarning ? (
+                <p className="text-sm font-bold text-destructive leading-tight line-clamp-2" title={financialWarning.title}>{financialWarning.title}</p>
+              ) : (
+                <p className="text-xl font-bold text-emerald-600">سليم</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 4. Company Health & 5. Readiness */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Company Health Details */}
+        {companyHealth && (
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-base flex items-center gap-2"><HeartPulse className="h-4 w-4 text-primary" /> تفاصيل صحة الشركة</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 grid gap-4 grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">العمليات (Operational)</p>
+                <Badge variant={companyHealth.operational >= 80 ? 'success' : companyHealth.operational >= 50 ? 'warning' : 'destructive'}>{companyHealth.operational}%</Badge>
               </div>
               <div>
-                <p className="text-xs font-semibold text-primary uppercase tracking-wider">التقييم الشامل للمخاطر</p>
-                <div className="flex items-start gap-2 mt-1 bg-background p-2 rounded border">
-                  <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground leading-tight">{ceoNextMove.risk}</p>
-                </div>
+                <p className="text-xs text-muted-foreground mb-1">المالية (Financial)</p>
+                <Badge variant={companyHealth.financial >= 80 ? 'success' : companyHealth.financial >= 50 ? 'warning' : 'destructive'}>{companyHealth.financial}%</Badge>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Core Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Rocket className="h-4 w-4" /> <span className="text-xs font-semibold uppercase">جاهزية المنتج</span>
-            </div>
-            <p className="text-2xl font-bold">{productReadinessPct}%</p>
-            <Progress value={productReadinessPct} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <TrendingUp className="h-4 w-4" /> <span className="text-xs font-semibold uppercase">جاهزية الإطلاق</span>
-            </div>
-            <p className="text-2xl font-bold">{launchReadinessPct}%</p>
-            <Progress value={launchReadinessPct} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
-
-        <Card className={financeSummary.utilizationPct >= 90 ? 'border-red-500 bg-red-50' : ''}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <DollarSign className="h-4 w-4" /> <span className="text-xs font-semibold uppercase">استهلاك الميزانية</span>
-            </div>
-            <p className="text-2xl font-bold">{financeSummary.utilizationPct.toFixed(1)}%</p>
-            <Progress value={financeSummary.utilizationPct} colorOverride={financeSummary.utilizationPct >= 90 ? 'bg-red-500' : undefined} className="mt-2 h-2" />
-          </CardContent>
-        </Card>
-
-        <Card className={criticalBlockersCount > 0 ? 'border-red-500 bg-red-50' : ''}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <AlertTriangle className="h-4 w-4" /> <span className="text-xs font-semibold uppercase">عوائق حرجة</span>
-            </div>
-            <p className="text-2xl font-bold text-destructive">{criticalBlockersCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">تمنع الإطلاق</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Market Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Users className="h-4 w-4 text-blue-500" /> <span className="text-xs font-semibold uppercase">معدل التحويل (Leads)</span>
-            </div>
-            <p className="text-2xl font-bold">{marketKPIs.leadConversionRate.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Target className="h-4 w-4 text-purple-500" /> <span className="text-xs font-semibold uppercase">قيمة المبيعات المتوقعة</span>
-            </div>
-            <p className="text-2xl font-bold">{marketKPIs.weightedPipeline.toLocaleString()} د.ج</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <Wallet className="h-4 w-4 text-emerald-500" /> <span className="text-xs font-semibold uppercase">الإيرادات المحققة</span>
-            </div>
-            <p className="text-2xl font-bold text-emerald-600">{marketKPIs.wonRevenue.toLocaleString()} د.ج</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Phase 5 — Financial Control Summary */}
-      {financialControl && (
-        <Card className="border border-slate-200 bg-slate-50/50">
-          <CardHeader className="pb-3 border-b">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-primary" /> التحكم المالي
-              </CardTitle>
-              <Link to="/financial-control" className="text-xs text-primary hover:underline">عرض التفاصيل ←</Link>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div className="text-center p-3 bg-white rounded-lg border">
-                <p className="text-xs text-slate-500 mb-1">السيولة المتاحة</p>
-                <p className="font-black text-slate-800 text-base">{(financialControl.cashPosition.availableCash/1000).toFixed(0)}k دج</p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">المنتج (Product)</p>
+                <Badge variant={companyHealth.product >= 80 ? 'success' : companyHealth.product >= 50 ? 'warning' : 'destructive'}>{companyHealth.product}%</Badge>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg border">
-                <p className="text-xs text-slate-500 mb-1">Gross Burn / شهر</p>
-                <p className="font-black text-red-600 text-base">{(financialControl.burnRate.grossBurn/1000).toFixed(0)}k دج</p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">السوق (Market)</p>
+                <Badge variant={companyHealth.market >= 80 ? 'success' : companyHealth.market >= 50 ? 'warning' : 'destructive'}>{companyHealth.market}%</Badge>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg border">
-                <p className="text-xs text-slate-500 mb-1">Net Burn / شهر</p>
-                <p className={`font-black text-base ${financialControl.burnRate.isCashFlowPositive ? 'text-green-600' : 'text-orange-600'}`}>
-                  {financialControl.burnRate.isCashFlowPositive ? 'إيجابي' : `${(financialControl.burnRate.netBurn/1000).toFixed(0)}k دج`}
-                </p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">الفريق (Team)</p>
+                <Badge variant={companyHealth.team >= 80 ? 'success' : companyHealth.team >= 50 ? 'warning' : 'destructive'}>{companyHealth.team}%</Badge>
               </div>
-              <div className="text-center p-3 bg-white rounded-lg border">
-                <p className="text-xs text-slate-500 mb-1">مدة الاستمرارية</p>
-                <p className={`font-black text-base ${
-                  financialControl.runway.status === 'Healthy' ? 'text-green-600' :
-                  financialControl.runway.status === 'Warning' ? 'text-amber-600' : 'text-red-600'
-                }`}>
-                  {financialControl.runway.isNoBurn ? '∞' : `${financialControl.runway.months} شهر`}
-                </p>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">النمو (Growth)</p>
+                <Badge variant={companyHealth.growth >= 80 ? 'success' : companyHealth.growth >= 50 ? 'warning' : 'destructive'}>{companyHealth.growth}%</Badge>
               </div>
-            </div>
-            {financialControl.signals[0].severity !== 'Healthy' && (
-              <div className={`mt-3 flex items-start gap-2 p-3 rounded-lg text-xs border ${
-                financialControl.signals[0].severity === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}>
-                <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
-                <span><strong>{financialControl.signals[0].title}:</strong> {financialControl.signals[0].message}</span>
-              </div>
-            )}
-            <p className="text-[10px] text-slate-400 text-center mt-3">Founder Planning Metrics — DEMO DATA — ليست بيانات محاسبية رسمية</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {incubationPhase && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2"><Target className="h-4 w-4 text-primary" /> مرحلة الحاضنة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm font-semibold mb-1">{incubationPhase.name}</p>
-              <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{incubationPhase.currentObjective}</p>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-medium text-muted-foreground">التسليمات المنجزة</span>
-                <span>{deliverables.filter(d => d.status === 'Completed').length} / {deliverables.length}</span>
-              </div>
-              <Progress value={deliverables.length ? (deliverables.filter(d => d.status === 'Completed').length / deliverables.length) * 100 : 0} className="h-1.5" />
             </CardContent>
           </Card>
         )}
 
+        {/* Readiness */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><AlertCircle className="h-4 w-4 text-amber-500" /> المخاطر العالية النشطة</CardTitle>
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-base flex items-center gap-2"><Rocket className="h-4 w-4 text-primary" /> مستوى الجاهزية</CardTitle>
           </CardHeader>
-          <CardContent>
-            {activeHighRisks.length > 0 ? (
-              <ul className="space-y-2">
-                {activeHighRisks.slice(0, 3).map(r => (
-                  <li key={r.id} className="text-xs flex justify-between items-center p-1.5 bg-muted/20 rounded">
-                    <span className="truncate pr-2 font-medium">{r.title}</span>
-                    <Badge variant={r.severity === 'Critical' ? 'destructive' : 'warning'} className="text-[9px] px-1.5 py-0">{r.severity === 'Critical' ? 'حرج' : 'عالي'}</Badge>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-muted-foreground">لا توجد مخاطر عالية أو حرجة نشطة حالياً.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2"><Scale className="h-4 w-4 text-blue-500" /> القرارات الأخيرة</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {decisions.slice(0, 3).map(d => (
-                <li key={d.id} className="text-xs p-1.5 bg-muted/20 rounded">
-                  <div className="flex justify-between">
-                    <span className="truncate font-medium">{d.title}</span>
-                    <Badge variant={d.status === 'Decided' || d.status === 'Implemented' ? 'success' : 'secondary'} className="text-[9px] px-1.5 py-0">{d.status === 'Decided' || d.status === 'Implemented' ? 'معتمد' : d.status}</Badge>
-                  </div>
-                </li>
-              ))}
-              {decisions.length === 0 && <p className="text-xs text-muted-foreground">لم يتم تسجيل قرارات بعد.</p>}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Phase 6: Governance Snapshot */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-purple-500" /> تنبيهات الحوكمة</div>
-              <Link to="/governance" className="text-[10px] text-primary hover:underline">التفاصيل</Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {governanceSignals.filter(s => s.severity !== 'Healthy').length > 0 ? (
-              <ul className="space-y-2">
-                {governanceSignals.filter(s => s.severity !== 'Healthy').slice(0, 3).map((sig, i) => (
-                  <li key={i} className="text-xs flex justify-between items-center p-1.5 bg-muted/20 rounded">
-                    <span className="truncate pr-2 font-medium" title={sig.title}>{sig.title}</span>
-                    <Badge variant={sig.severity === 'Critical' ? 'destructive' : sig.severity === 'High' ? 'warning' : 'secondary'} className="text-[9px] px-1.5 py-0">{sig.severity}</Badge>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-green-500" /> الحوكمة والعمليات سليمة.
-              </p>
-            )}
+          <CardContent className="pt-4 space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">جاهزية المنتج</span>
+                <span>{productReadinessPct}%</span>
+              </div>
+              <Progress value={productReadinessPct} className="h-2" />
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">جاهزية الإطلاق</span>
+                <span>{launchReadinessPct}%</span>
+              </div>
+              <Progress value={launchReadinessPct} className="h-2" />
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">صحة السوق</span>
+                <span>{marketKPIs.marketHealthScore}%</span>
+              </div>
+              <Progress value={marketKPIs.marketHealthScore} className="h-2" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* 6. Execution & 7. Commercial */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Execution */}
+        <Card>
+          <CardHeader className="pb-3 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /> ملخص التنفيذ</CardTitle>
+              <Link to="/today" className="text-xs text-primary hover:underline">اليوم ←</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 grid grid-cols-2 gap-4">
+            <div className="bg-slate-50 border rounded-lg p-3 text-center">
+              <Target className="h-5 w-5 mx-auto text-blue-500 mb-1" />
+              <p className="text-xl font-bold">{goals.length}</p>
+              <p className="text-xs text-muted-foreground">أهداف</p>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-3 text-center">
+              <Zap className="h-5 w-5 mx-auto text-amber-500 mb-1" />
+              <p className="text-xl font-bold">{initiatives.length}</p>
+              <p className="text-xs text-muted-foreground">مبادرات</p>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-3 text-center">
+              <Briefcase className="h-5 w-5 mx-auto text-indigo-500 mb-1" />
+              <p className="text-xl font-bold">{projects.length}</p>
+              <p className="text-xs text-muted-foreground">مشاريع</p>
+            </div>
+            <div className="bg-slate-50 border rounded-lg p-3 text-center">
+              <CheckSquare className="h-5 w-5 mx-auto text-emerald-500 mb-1" />
+              <p className="text-xl font-bold">{tasks.filter(t => t.status !== 'Done').length}</p>
+              <p className="text-xs text-muted-foreground">مهام نشطة</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Commercial */}
+        <Card>
+          <CardHeader className="pb-3 border-b">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> ملخص السوق والمبيعات</CardTitle>
+              <Link to="/pipeline" className="text-xs text-primary hover:underline">Pipeline ←</Link>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4 grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-xl font-bold">{leads.length}</p>
+              <p className="text-xs text-muted-foreground">Leads</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-blue-600">{opportunities.length}</p>
+              <p className="text-xs text-muted-foreground">Opportunities</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-amber-600">{pilots.length}</p>
+              <p className="text-xs text-muted-foreground">Pilots</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-indigo-600">{customers.length}</p>
+              <p className="text-xs text-muted-foreground">Customers</p>
+            </div>
+            <div className="col-span-2 text-center bg-emerald-50 border border-emerald-100 rounded-lg p-2">
+              <p className="text-lg font-bold text-emerald-600">{marketKPIs.wonRevenue.toLocaleString()} د.ج</p>
+              <p className="text-xs text-muted-foreground">Revenue</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 8. Important KPIs */}
       <Card>
-        <CardHeader className="pb-3 border-b bg-muted/20">
-          <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /> مؤشرات الأداء الرئيسية</CardTitle>
+        <CardHeader className="pb-3 border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2"><LineChart className="h-4 w-4 text-primary" /> أهم مؤشرات الأداء (KPIs)</CardTitle>
+            <Link to="/kpis" className="text-xs text-primary hover:underline">التفاصيل ←</Link>
+          </div>
         </CardHeader>
         <CardContent className="pt-4 grid gap-4 grid-cols-2 md:grid-cols-4">
           {kpis.slice(0, 4).map(k => (

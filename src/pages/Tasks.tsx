@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Modal } from '../components/ui/modal';
 import { Input, Textarea, Select, Label } from '../components/ui/form';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, CheckSquare } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 
 const COLUMNS: TaskStatus[] = ['Backlog', 'Todo', 'In Progress', 'Review', 'Done', 'Blocked'];
@@ -263,8 +263,19 @@ export function Tasks() {
                 })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      لم يتم العثور على مهام.
+                    <td colSpan={7} className="px-4 py-16">
+                      <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="bg-primary/10 p-3 rounded-full">
+                          <CheckSquare className="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-slate-800">لا توجد مهام بعد</p>
+                          <p className="text-sm text-muted-foreground mt-1">قم بإنشاء مهمتك الأولى للبدء في تتبع التنفيذ.</p>
+                        </div>
+                        <Button onClick={openCreate} className="mt-2" size="sm">
+                          <Plus className="ml-1.5 h-4 w-4" />مهمة جديدة
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 )}

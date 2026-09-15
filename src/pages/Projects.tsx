@@ -133,8 +133,15 @@ export function Projects() {
           );
         })}
         {projects.length === 0 && (
-          <div className="md:col-span-2 xl:col-span-3 py-12 text-center border-2 border-dashed rounded-xl">
-            <p className="text-muted-foreground">لا توجد مشاريع. قم بإنشاء مشروع للبدء.</p>
+          <div className="md:col-span-2 xl:col-span-3 py-16 text-center border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 bg-slate-50">
+            <div className="bg-primary/10 p-3 rounded-full">
+              <FolderOpen className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-slate-800">لا توجد مشاريع بعد</p>
+              <p className="text-sm text-muted-foreground mt-1">قم بإضافة مشروعك الأول للبدء في تنظيم مبادراتك الاستراتيجية.</p>
+            </div>
+            <Button onClick={openCreate} className="mt-2"><Plus className="ml-1.5 h-4 w-4" />إنشاء مشروع</Button>
           </div>
         )}
       </div>

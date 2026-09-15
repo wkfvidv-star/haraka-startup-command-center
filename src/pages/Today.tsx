@@ -1,122 +1,137 @@
 import { useAppStore } from '../store';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { CheckCircle2, Clock, Calendar, AlertTriangle, ShieldAlert, Rocket, Scale, HelpCircle, TrendingDown } from 'lucide-react';
-import { isPast, format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { CheckCircle2, Clock, Calendar, AlertTriangle, ShieldAlert, Rocket, ArrowRight, XCircle } from 'lucide-react';
+import { isPast, isToday, isTomorrow, isFuture, format } from 'date-fns';
 
 export function Today() {
-  const {
-    tasks, launchBlockers, risks, deliverables, decisions, incubationPhase, financialControl,
-    governanceCalendar
-  } = useAppStore();
+  const { tasks, launchBlockers, risks, deliverables } = useAppStore();
 
-  const overdueTasks = tasks.filter(t => t.status !== 'Done' && isPast(new Date(t.deadline)));
-  const criticalOverdue = overdueTasks.filter(t => t.priority === 'P0 (Critical)');
-  const highOverdue = overdueTasks.filter(t => t.priority === 'P1 (High)');
-  
-  const todayTasks = tasks.filter(t => t.status !== 'Done' && !isPast(new Date(t.deadline)) && new Date(t.deadline).toDateString() === new Date().toDateString());
+  // 1. Critical (Overdue P0, Critical Blockers, Critical Risks)
+  const criticalTasks = tasks.filter(t => t.status !== 'Done' && (t.priority === 'P0 (Critical)' || t.priority === 'P1 (High)') && isPast(new Date(t.deadline)));
+  const criticalBlockers = launchBlockers.filter(b => b.status !== 'Resolved' && b.severity === 'Critical');
+  const criticalRisks = risks.filter(r => r.status === 'Open' && r.severity === 'Critical');
+
+  // 2. High Priority (Due today or High priority not yet due but urgent)
+  const highPriorityTasks = tasks.filter(t => t.status !== 'Done' && (t.priority === 'P1 (High)') && !isPast(new Date(t.deadline)) && (isToday(new Date(t.deadline)) || isTomorrow(new Date(t.deadline))));
+
+  // 3. Due Today
+  const dueTodayTasks = tasks.filter(t => t.status !== 'Done' && t.priority !== 'P0 (Critical)' && t.priority !== 'P1 (High)' && isToday(new Date(t.deadline)));
+  const dueTodayDeliverables = deliverables.filter(d => d.status !== 'Completed' && isToday(new Date(d.dueDate)));
+
+  // 4. Blocked
   const blockedTasks = tasks.filter(t => t.status === 'Blocked');
+  
+  // 5. Next Actions (In Progress or selected next tasks)
+  const nextActions = tasks.filter(t => t.status === 'In Progress');
 
-  const activeBlockers = launchBlockers.filter(b => b.status !== 'Resolved');
-  const activeHighRisks = risks.filter(r => r.status === 'Open' && (r.severity === 'Critical' || r.severity === 'High'));
-  const pendingDecisions = decisions.filter(d => d.status === 'Open' || d.status === 'Under Review');
+  // 6. Upcoming (Due tomorrow or soon)
+  const upcomingTasks = tasks.filter(t => t.status !== 'Done' && isFuture(new Date(t.deadline)) && !isToday(new Date(t.deadline))).slice(0, 5);
 
   return (
     <div className="space-y-6 max-w-screen-xl">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">أجندة اليوم</h1>
-        <p className="text-sm text-muted-foreground">الأولويات العاجلة والعوائق النشطة.</p>
+        <h1 className="text-2xl font-bold tracking-tight">اليوم (Today)</h1>
+        <p className="text-sm text-muted-foreground">أداة التنفيذ اليومية - مرتبة حسب الأولوية المطلقة.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* ACTION REQUIRED COLUMN */}
         <div className="space-y-6">
           
-          {/* Critical Overdue & Blockers */}
+          {/* 1. Critical */}
           <Card className="border-red-500 bg-red-50/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" /> قضايا حرجة
+                <AlertTriangle className="h-5 w-5" /> 🔴 قضايا حرجة (يجب التدخل الآن)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {activeBlockers.filter(b => b.severity === 'Critical').map(b => (
+                {criticalBlockers.map(b => (
                   <div key={b.id} className="p-3 bg-white rounded-lg border-r-4 border-r-destructive shadow-sm">
-                    <div className="flex gap-2">
-                      <Rocket className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold">{b.title} <Badge variant="destructive" className="mr-2 text-[9px] py-0">عائق</Badge></p>
-                        <p className="text-xs text-muted-foreground mt-1">{b.owner} • {b.category}</p>
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <Rocket className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold">{b.title} <Badge variant="destructive" className="mr-2 text-[9px] py-0">عائق إطلاق</Badge></p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
-                
-                {criticalOverdue.map(t => (
+                {criticalRisks.map(r => (
+                  <div key={r.id} className="p-3 bg-white rounded-lg border-r-4 border-r-destructive shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <ShieldAlert className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold">{r.title} <Badge variant="destructive" className="mr-2 text-[9px] py-0">خطر حرج</Badge></p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {criticalTasks.map(t => (
                   <div key={t.id} className="p-3 bg-white rounded-lg border-r-4 border-r-destructive shadow-sm">
-                    <div className="flex gap-2">
-                      <Clock className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-semibold">{t.title} <Badge variant="destructive" className="mr-2 text-[9px] py-0">مهمة</Badge></p>
-                        <p className="text-xs text-muted-foreground mt-1">متأخرة منذ: {format(new Date(t.deadline), 'MMM d')}</p>
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-2">
+                        <Clock className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold">{t.title} <Badge variant="destructive" className="mr-2 text-[9px] py-0">مهمة متأخرة</Badge></p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
-
-                {activeBlockers.filter(b => b.severity === 'Critical').length === 0 && criticalOverdue.length === 0 && (
+                {(criticalBlockers.length === 0 && criticalRisks.length === 0 && criticalTasks.length === 0) && (
                   <p className="text-sm text-muted-foreground italic flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" /> لا توجد عوائق تشغيلية حرجة.
+                    <CheckCircle2 className="h-4 w-4 text-green-500" /> لا توجد تدخلات حرجة مطلوبة الآن.
                   </p>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* High Risks */}
-          <Card className={activeHighRisks.length > 0 ? "border-amber-500 bg-amber-50/20" : ""}>
+          {/* 2. High Priority */}
+          <Card className={(highPriorityTasks.length > 0) ? "border-orange-500 bg-orange-50/20" : ""}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2 text-amber-600">
-                <ShieldAlert className="h-5 w-5" /> مخاطر عالية الشدة
+              <CardTitle className="text-lg flex items-center gap-2 text-orange-600">
+                <AlertTriangle className="h-5 w-5" /> 🟠 أولوية عالية (يجب إنجازها اليوم)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {activeHighRisks.map(r => (
-                  <div key={r.id} className="p-3 bg-white rounded-lg border-r-4 border-r-amber-500 shadow-sm">
-                    <p className="text-sm font-semibold">{r.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{r.description}</p>
-                    <div className="mt-2 text-xs font-medium text-amber-700">التخفيف: {r.mitigation}</div>
+                {highPriorityTasks.map(t => (
+                  <div key={t.id} className="p-3 bg-white rounded-lg border-r-4 border-r-orange-500 shadow-sm">
+                    <p className="text-sm font-semibold">{t.title}</p>
+                    <p className="text-xs text-muted-foreground mt-1">المالك: {t.owner}</p>
                   </div>
                 ))}
-                {activeHighRisks.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">لا توجد مخاطر عالية نشطة.</p>
+                {highPriorityTasks.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">لا توجد مهام ذات أولوية عالية لليوم.</p>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Pending Decisions */}
-          <Card>
+          {/* 4. Blocked */}
+          <Card className={blockedTasks.length > 0 ? "border-slate-400 bg-slate-100/50" : ""}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center gap-2 text-blue-600">
-                <Scale className="h-5 w-5" /> قرارات مطلوبة
+              <CardTitle className="text-lg flex items-center gap-2 text-slate-700">
+                <XCircle className="h-5 w-5" /> ⚫ مهام محظورة (تمنع التقدم)
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {pendingDecisions.map(d => (
-                  <div key={d.id} className="p-3 bg-muted/20 rounded-lg border">
-                    <p className="text-sm font-semibold flex items-center gap-2">
-                      <HelpCircle className="h-4 w-4 text-blue-500" /> {d.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">السياق: {d.description}</p>
+                {blockedTasks.map(t => (
+                  <div key={t.id} className="p-3 bg-white rounded-lg border-r-4 border-r-slate-500 shadow-sm">
+                    <p className="text-sm font-semibold line-through text-slate-500">{t.title}</p>
+                    <p className="text-xs text-slate-400 mt-1">محظورة - تحتاج إلى تدخل لحلها.</p>
                   </div>
                 ))}
-                {pendingDecisions.length === 0 && (
-                  <p className="text-sm text-muted-foreground italic">لا توجد قرارات معلقة.</p>
+                {blockedTasks.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">لا توجد مهام محظورة.</p>
                 )}
               </div>
             </CardContent>
@@ -127,146 +142,77 @@ export function Today() {
         {/* SCHEDULE & PIPELINE COLUMN */}
         <div className="space-y-6">
           
-          {/* Incubation Deadlines */}
-          {incubationPhase && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" /> الحاضنة والمراحل الرئيسية
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">المرحلة القادمة</p>
-                  <p className="text-sm font-medium text-primary mt-1">{incubationPhase.nextMilestone}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">التسليمات المعلقة</p>
-                  {deliverables.filter(d => d.status !== 'Completed').map(d => (
-                    <div key={d.id} className="flex justify-between items-center text-sm p-2 bg-muted/10 rounded">
-                      <span>{d.title}</span>
-                      <span className="text-xs text-muted-foreground">التسليم: {format(new Date(d.dueDate), 'MMM d')}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* High Priority Overdue & Due Today */}
+          {/* 3. Due Today */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5 text-muted-foreground" /> مسار التنفيذ
+                <Clock className="h-5 w-5 text-amber-500" /> 🟡 تستحق اليوم
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {highOverdue.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-destructive uppercase mb-2">أولوية عالية متأخرة ({highOverdue.length})</p>
-                    <div className="space-y-2">
-                      {highOverdue.map(t => (
-                        <div key={t.id} className="text-sm p-2 bg-red-50/50 rounded border-r-2 border-red-300">{t.title}</div>
-                      ))}
-                    </div>
+              <div className="space-y-3">
+                {dueTodayTasks.map(t => (
+                  <div key={t.id} className="p-3 bg-muted/20 rounded-lg border">
+                    <p className="text-sm font-medium">{t.title}</p>
                   </div>
+                ))}
+                {dueTodayDeliverables.map(d => (
+                  <div key={d.id} className="p-3 bg-muted/20 rounded-lg border border-primary/20">
+                    <p className="text-sm font-medium">{d.title} <Badge variant="outline" className="text-[9px]">تسليم حاضنة</Badge></p>
+                  </div>
+                ))}
+                {(dueTodayTasks.length === 0 && dueTodayDeliverables.length === 0) && (
+                  <p className="text-sm text-muted-foreground italic">لا توجد أعمال اعتيادية تستحق اليوم.</p>
                 )}
-                {blockedTasks.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-amber-600 uppercase mb-2">مهام محظورة ({blockedTasks.length})</p>
-                    <div className="space-y-2">
-                      {blockedTasks.map(t => (
-                        <div key={t.id} className="text-sm p-2 bg-amber-50/50 rounded border-r-2 border-amber-300">{t.title}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">تستحق اليوم ({todayTasks.length})</p>
-                  <div className="space-y-2">
-                    {todayTasks.map(t => (
-                      <div key={t.id} className="text-sm p-2 bg-muted/20 rounded">{t.title}</div>
-                    ))}
-                    {todayTasks.length === 0 && <p className="text-sm text-muted-foreground italic">لا توجد مهام تستحق اليوم.</p>}
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Phase 6: Governance Calendar */}
+          {/* 5. Next Actions */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2 text-purple-600">
-                <Calendar className="h-5 w-5" /> تقويم الحوكمة
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ArrowRight className="h-5 w-5 text-blue-500" /> ➡️ الإجراءات التالية (قيد التنفيذ)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {governanceCalendar.length > 0 ? (
-                <ul className="space-y-3">
-                  {governanceCalendar.slice(0, 3).map((entry, i) => (
-                    <li key={i} className="flex gap-3 text-sm">
-                      <div className="shrink-0 mt-0.5"><Clock className="h-4 w-4 text-purple-500" /></div>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start">
-                          <span className="font-medium">{entry.title}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                            entry.severity === 'Critical' ? 'bg-red-50 text-red-700 border-red-200' :
-                            entry.severity === 'High' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                            'bg-slate-50 text-slate-700 border-slate-200'
-                          }`}>
-                            {format(new Date(entry.date), 'dd MMM')}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{entry.status}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-2">لا توجد أحداث حوكمة قادمة.</p>
-              )}
+              <div className="space-y-3">
+                {nextActions.map(t => (
+                  <div key={t.id} className="p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <p className="text-sm font-medium text-blue-900">{t.title}</p>
+                  </div>
+                ))}
+                {nextActions.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">لا توجد مهام قيد التنفيذ حالياً.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 6. Upcoming */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-muted-foreground" /> غداً / قريباً
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {upcomingTasks.map(t => (
+                  <div key={t.id} className="flex justify-between items-center text-sm p-2 bg-muted/10 rounded">
+                    <span className="truncate pr-2">{t.title}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{format(new Date(t.deadline), 'MMM d')}</span>
+                  </div>
+                ))}
+                {upcomingTasks.length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">لا توجد مهام قادمة قريباً.</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
         </div>
       </div>
-
-      {/* Phase 5 — Financial Actions */}
-      {financialControl && financialControl.signals[0].severity !== 'Healthy' && (
-        <Card className="border-amber-200 bg-amber-50/40">
-          <CardHeader className="pb-3 border-b border-amber-200">
-            <CardTitle className="text-base flex items-center gap-2 text-amber-800">
-              <TrendingDown className="h-4 w-4" /> إجراءات مالية مقترحة — Financial Actions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-3">
-            {financialControl.signals
-              .filter(s => s.severity !== 'Healthy')
-              .map((sig, i) => (
-                <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border text-sm ${
-                  sig.severity === 'Critical' ? 'bg-red-50 border-red-200 text-red-800' :
-                  sig.severity === 'High' ? 'bg-orange-50 border-orange-200 text-orange-800' :
-                  'bg-amber-50 border-amber-200 text-amber-800'
-                }`}>
-                  <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-bold text-xs">{sig.title}</p>
-                    <p className="text-xs mt-0.5 opacity-90">{sig.message}</p>
-                  </div>
-                </div>
-              ))
-            }
-            <div className="text-center pt-2">
-              <Link to="/financial-control" className="text-xs text-primary hover:underline font-medium">
-                عرض التحكم المالي الكامل ←
-              </Link>
-            </div>
-            <p className="text-[10px] text-amber-600 text-center">هذه توصيات تلقائية من Rule Engine — ليست قرارات نهائية</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
