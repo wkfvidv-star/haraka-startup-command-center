@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: contractService.ts — Phase 6
 // DEMO DATA only. No legal records.

@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: governanceService.ts — Phase 6
 // Governance Profile + Signals + Calendar engine.

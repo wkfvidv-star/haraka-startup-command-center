@@ -1,21 +1,42 @@
+const delay = (ms = 100) => new Promise<void>((r) => setTimeout(r, ms));
+import { supabase } from '../lib/supabase';
 import { ProductReadinessItem, NewProductReadinessItem } from '../types/product';
 import { demoProducts } from '../data/demo/products';
 
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 
 class ProductService {
-  private store: ProductReadinessItem[] = [...demoProducts];
 
-  async getAll(): Promise<ProductReadinessItem[]> {
-    await delay(200);
-    return [...this.store];
+  private async getCompanyId() {
+    if (!supabase) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
+  private store: any[] = [];
+
+  async getAll(): Promise<ProductReadinessItem[]>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('product_readiness_items').select('*').eq('company_id', company_id);
+    if (error) throw error;
+    return data;
   }
 
-  async create(data: NewProductReadinessItem): Promise<ProductReadinessItem> {
-    await delay(300);
-    const item: ProductReadinessItem = { ...data, id: `pr-${Date.now()}` };
-    this.store.push(item);
-    return item;
+  async create(data: NewProductReadinessItem): Promise<ProductReadinessItem>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('product_readiness_items').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
   }
 
   async update(id: string, patch: Partial<ProductReadinessItem>): Promise<ProductReadinessItem> {
@@ -26,9 +47,10 @@ class ProductService {
     return this.store[idx];
   }
 
-  async delete(id: string): Promise<void> {
-    await delay(300);
-    this.store = this.store.filter(i => i.id !== id);
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('product_readiness_items').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 

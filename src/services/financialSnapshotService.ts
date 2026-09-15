@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: financialSnapshotService.ts — Phase 5
 // Monthly snapshots — explicitly DEMO DATA.

@@ -1,9 +1,10 @@
+
 import { GrowthTarget } from '../types/growth';
 import { demoGrowthTargets } from '../data/demo/growth';
 import { delay } from './delay';
 
 class GrowthService {
-  private store: GrowthTarget[] = [...demoGrowthTargets];
+  private store: any[] = [];
 
   async getAll(): Promise<GrowthTarget[]> {
     await delay(200);

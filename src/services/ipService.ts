@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: ipService.ts — Phase 6
 // Tracking only. No legal advice. DEMO DATA.

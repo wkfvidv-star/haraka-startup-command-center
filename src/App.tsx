@@ -1,5 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { Login } from './pages/Login';
+import { Onboarding } from './pages/Onboarding';
+
 import { Dashboard } from './pages/Dashboard';
 import { Today } from './pages/Today';
 import { CompanyStatus } from './pages/CompanyStatus';
@@ -52,55 +56,62 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="today" element={<Today />} />
-          <Route path="executive" element={<Executive />} />
-          
-          <Route path="status" element={<CompanyStatus />} />
-          <Route path="goals" element={<Goals />} />
-          <Route path="initiatives" element={<Initiatives />} />
-          <Route path="growth" element={<Growth />} />
-          <Route path="company-health" element={<CompanyHealth />} />
-          
-          <Route path="roadmap" element={<Roadmap />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="product" element={<ProductReadiness />} />
-          <Route path="launch" element={<LaunchControl />} />
-          
-          <Route path="market" element={<MarketIntelligence />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="pipeline" element={<Pipeline />} />
-          <Route path="pilots" element={<Pilots />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="offers" element={<Offers />} />
-          <Route path="marketing" element={<Marketing />} />
-          <Route path="content" element={<Content />} />
-          <Route path="partnerships" element={<Partnerships />} />
-          <Route path="revenue" element={<Revenue />} />
-          
-          <Route path="team" element={<Team />} />
-          <Route path="performance" element={<Performance />} />
-          <Route path="finance" element={<Finance />} />
-          {/* Phase 5 */}
-          <Route path="financial-control" element={<FinancialControl />} />
-          <Route path="financial-scenarios" element={<FinancialScenarios />} />
-          <Route path="allocations" element={<Allocations />} />
-          <Route path="funding-milestones" element={<FundingMilestones />} />
-          <Route path="risks" element={<Risks />} />
-          <Route path="decisions" element={<Decisions />} />
-          <Route path="kpis" element={<KPIs />} />
-          
-          {/* Phase 6 */}
-          <Route path="governance" element={<Governance />} />
-          <Route path="obligations" element={<Obligations />} />
-          <Route path="documents" element={<Documents />} />
-          <Route path="contracts-ip" element={<ContractsIP />} />
-          <Route path="meetings" element={<Meetings />} />
-          
-          <Route path="incubation" element={<Incubation />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="today" element={<Today />} />
+            <Route path="executive" element={<Executive />} />
+            
+            <Route path="status" element={<CompanyStatus />} />
+            <Route path="goals" element={<Goals />} />
+            <Route path="initiatives" element={<Initiatives />} />
+            <Route path="growth" element={<Growth />} />
+            <Route path="company-health" element={<CompanyHealth />} />
+            
+            <Route path="roadmap" element={<Roadmap />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="product" element={<ProductReadiness />} />
+            <Route path="launch" element={<LaunchControl />} />
+            
+            <Route path="market" element={<MarketIntelligence />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="pipeline" element={<Pipeline />} />
+            <Route path="pilots" element={<Pilots />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="offers" element={<Offers />} />
+            <Route path="marketing" element={<Marketing />} />
+            <Route path="content" element={<Content />} />
+            <Route path="partnerships" element={<Partnerships />} />
+            <Route path="revenue" element={<Revenue />} />
+            
+            <Route path="team" element={<Team />} />
+            <Route path="performance" element={<Performance />} />
+            <Route path="finance" element={<Finance />} />
+            {/* Phase 5 */}
+            <Route path="financial-control" element={<FinancialControl />} />
+            <Route path="financial-scenarios" element={<FinancialScenarios />} />
+            <Route path="allocations" element={<Allocations />} />
+            <Route path="funding-milestones" element={<FundingMilestones />} />
+            <Route path="risks" element={<Risks />} />
+            <Route path="decisions" element={<Decisions />} />
+            <Route path="kpis" element={<KPIs />} />
+            
+            {/* Phase 6 */}
+            <Route path="governance" element={<Governance />} />
+            <Route path="obligations" element={<Obligations />} />
+            <Route path="documents" element={<Documents />} />
+            <Route path="contracts-ip" element={<ContractsIP />} />
+            <Route path="meetings" element={<Meetings />} />
+            
+            <Route path="incubation" element={<Incubation />} />
+          </Route>
         </Route>
+        
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

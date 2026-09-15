@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: obligationService.ts — Phase 6
 // All data is DEMO DATA.

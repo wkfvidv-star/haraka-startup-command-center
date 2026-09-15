@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: financialScenarioService.ts — Phase 5
 // DEMO PLANNING SCENARIOS — Not real forecasts.

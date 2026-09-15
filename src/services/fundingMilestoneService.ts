@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: fundingMilestoneService.ts — Phase 5
 // All data is DEMO DATA. Not real financial records.

@@ -1,9 +1,28 @@
+const delay = (ms = 100) => new Promise<void>((r) => setTimeout(r, ms));
+import { supabase } from '../lib/supabase';
 import { LaunchBlocker, LaunchReadinessCategory, NewLaunchBlocker } from '../types/launch';
 import { demoLaunchBlockers, demoLaunchCategories } from '../data/demo/launch';
 
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 
 class LaunchService {
+
+  private async getCompanyId() {
+    const { data: { session } } = await supabase!.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase!
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
+
   private blockers: LaunchBlocker[] = [...demoLaunchBlockers];
   private categories: LaunchReadinessCategory[] = [...demoLaunchCategories];
 

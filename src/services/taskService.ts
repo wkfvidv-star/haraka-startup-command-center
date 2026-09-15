@@ -1,3 +1,5 @@
+const delay = (ms = 100) => new Promise<void>((r) => setTimeout(r, ms));
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: taskService.ts
 // In-memory CRUD for Tasks. Replace internals with Supabase later.
@@ -6,14 +8,33 @@
 import { Task, NewTask } from '../types/task';
 import { demoTasks } from '../data/demo';
 
-const delay = (ms = 120) => new Promise<void>((r) => setTimeout(r, ms));
+
 
 class TaskService {
-  private store: Task[] = structuredClone(demoTasks);
 
-  async getAll(): Promise<Task[]> {
-    await delay();
-    return structuredClone(this.store);
+  private async getCompanyId() {
+    if (!supabase) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
+  private store: any[] = [];
+
+  async getAll(): Promise<Task[]>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('tasks').select('*').eq('company_id', company_id);
+    if (error) throw error;
+    return data;
   }
 
   async getById(id: string): Promise<Task | null> {
@@ -26,34 +47,24 @@ class TaskService {
     return structuredClone(this.store.filter((t) => t.projectId === projectId));
   }
 
-  async create(data: NewTask): Promise<Task> {
-    await delay();
-    const now = new Date().toISOString();
-    const task: Task = {
-      ...data,
-      id: `task-${Date.now()}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-    this.store.push(task);
-    return structuredClone(task);
+  async create(data: NewTask): Promise<Task>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('tasks').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
   }
 
-  async update(id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<Task> {
-    await delay();
-    const idx = this.store.findIndex((t) => t.id === id);
-    if (idx === -1) throw new Error(`Task ${id} not found`);
-    this.store[idx] = {
-      ...this.store[idx],
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    };
-    return structuredClone(this.store[idx]);
+  async update(id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<Task>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('tasks').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
   }
 
-  async delete(id: string): Promise<void> {
-    await delay();
-    this.store = this.store.filter((t) => t.id !== id);
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('tasks').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 

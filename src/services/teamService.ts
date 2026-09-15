@@ -1,9 +1,10 @@
+
 import { TeamMember } from '../types/team';
 import { demoTeamMembers } from '../data/demo/team';
 import { delay } from './delay';
 
 class TeamService {
-  private store: TeamMember[] = [...demoTeamMembers];
+  private store: any[] = [];
 
   async getAll(): Promise<TeamMember[]> {
     await delay(200);

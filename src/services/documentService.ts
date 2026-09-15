@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: documentService.ts — Phase 6
 // Metadata only. No file storage. DEMO DATA.

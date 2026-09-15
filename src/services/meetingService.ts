@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 // ============================================================
 // SERVICE: meetingService.ts — Phase 6
 // DEMO DATA only.

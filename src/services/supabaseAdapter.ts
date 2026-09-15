@@ -17,7 +17,7 @@ export const SupabaseAdapter = {
   async getTasks(): Promise<Task[]> {
     if (!supabase) return [];
     
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('tasks')
       .select('*')
       .order('deadline', { ascending: true });
@@ -29,7 +29,7 @@ export const SupabaseAdapter = {
   async createTask(taskData: Partial<Task>): Promise<Task | null> {
     if (!supabase) return null;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('tasks')
       .insert([taskData])
       .select()
@@ -42,7 +42,7 @@ export const SupabaseAdapter = {
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
     if (!supabase) return;
 
-    const { error } = await supabase
+    const { error } = await supabase!
       .from('tasks')
       .update(updates)
       .eq('id', id);
@@ -53,7 +53,7 @@ export const SupabaseAdapter = {
   async deleteTask(id: string): Promise<void> {
     if (!supabase) return;
 
-    const { error } = await supabase
+    const { error } = await supabase!
       .from('tasks')
       .delete()
       .eq('id', id);

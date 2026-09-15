@@ -40,6 +40,7 @@ import {
 } from '../types/governance';
 import { Meeting as GovMeeting, NewMeeting } from '../types/governance';
 
+import { supabase } from '../lib/supabase';
 import { taskService } from '../services/taskService';
 import { projectService } from '../services/projectService';
 import { companyService } from '../services/companyService';
@@ -92,6 +93,10 @@ import {
 } from '../lib/ruleEngine';
 
 interface AppState {
+  session: any | null;
+  user: any | null;
+  activeCompanyId: string | null;
+  reset: () => void;
   tasks: Task[];
   projects: Project[];
   config: CompanyConfig | null;
@@ -400,6 +405,25 @@ function recomputeAll(s: Partial<AppState>): Partial<AppState> {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  session: null, user: null, activeCompanyId: null,
+  
+  reset: () => {
+    set({
+      session: null, user: null, activeCompanyId: null,
+      tasks: [], projects: [], config: null, ceoNextMove: null,
+      products: [], launchCategories: [], launchBlockers: [], incubationPhase: null,
+      deliverables: [], meetings: [], expenses: [], risks: [], decisions: [], kpis: [],
+      segments: [], leads: [], opportunities: [], offers: [], pilots: [],
+      customers: [], campaigns: [], contents: [], partnerships: [], revenues: [],
+      teamMembers: [], goals: [], initiatives: [], growthTargets: [],
+      financialAllocations: [], fundingMilestones: [], financialScenarios: [], financialSnapshots: [], financialControl: null,
+      governanceProfile: null, obligations: [], govDocuments: [], contracts: [], ipAssets: [], govMeetings: [],
+      governanceSignals: [], governanceCalendar: [],
+      productReadinessPct: 0, launchReadinessPct: 0, financeSummary: null, marketKPIs: null,
+      companyHealth: null, teamPerformances: [],
+    });
+  },
+
   tasks: [], projects: [], config: null, ceoNextMove: null,
   products: [], launchCategories: [], launchBlockers: [], incubationPhase: null,
   deliverables: [], meetings: [], expenses: [], risks: [], decisions: [], kpis: [],
@@ -418,6 +442,25 @@ export const useAppStore = create<AppState>((set, get) => ({
   init: async () => {
     set({ isLoading: true, error: null });
     try {
+      if (!supabase) throw new Error('Supabase client not found');
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        get().reset();
+        set({ isLoading: false });
+        return;
+      }
+      
+      const { data: members, error: memError } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('status', 'Active');
+        
+      let activeCompanyId = null;
+      if (!memError && members && members.length > 0) {
+        activeCompanyId = members[0].company_id;
+      }
+
       const [
         tasks, projects, config, products, launchCategories, launchBlockers, 
         incPhase, deliverables, meetings, expenses, risks, decisions, kpis,
@@ -445,6 +488,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       ]);
 
       const state = {
+        session, user: session.user, activeCompanyId,
         tasks, projects, config, products, launchCategories, launchBlockers, 
         incubationPhase: incPhase, deliverables, meetings, expenses, risks, decisions, kpis,
         segments, leads, opportunities, offers, pilots, customers, campaigns, contents, partnerships, revenues,
