@@ -1,107 +1,38 @@
 import { supabase } from '../lib/supabase';
-// ============================================================
-// SERVICE: documentService.ts — Phase 6
-// Metadata only. No file storage. DEMO DATA.
-// ============================================================
 import { DocumentRecord, NewDocumentRecord } from '../types/governance';
 
-const now = new Date().toISOString();
-const today = new Date();
-const inDays = (d: number) => new Date(today.getTime() + d * 86400000).toISOString().split('T')[0];
+const META_SEPARATOR = '\n---HARAKA_META---\n';
 
-let documents: DocumentRecord[] = [
-  {
-    id: 'doc-1',
-    name: 'عقد الانضمام للحاضنة',
-    category: 'Incubation',
-    status: 'Active',
-    owner: 'المؤسس',
-    documentDate: '2026-01-15',
-    expiryDate: inDays(90),
-    notes: 'DEMO DATA',
-    createdAt: '2026-01-15T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-2',
-    name: 'النظام الأساسي للشركة',
-    category: 'Company',
-    status: 'Active',
-    owner: 'المؤسس',
-    documentDate: '2025-11-01',
-    notes: 'DEMO DATA',
-    createdAt: '2025-11-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-3',
-    name: 'شهادة تسجيل العلامة التجارية',
-    category: 'IP',
-    status: 'Missing',
-    owner: 'المؤسس',
-    documentDate: '',
-    notes: 'DEMO DATA — لم يتم تسجيل العلامة بعد',
-    createdAt: '2026-06-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-4',
-    name: 'خطة العمل الأولية',
-    category: 'Business',
-    status: 'Archived',
-    owner: 'المؤسس',
-    documentDate: '2025-09-01',
-    notes: 'DEMO DATA — تم استبدالها بخطة محدثة',
-    createdAt: '2025-09-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-5',
-    name: 'اتفاقية السرية مع الشريك',
-    category: 'Contract',
-    status: 'Active',
-    owner: 'المؤسس',
-    documentDate: '2026-03-01',
-    expiryDate: inDays(25),
-    notes: 'DEMO DATA — تحتاج تجديد',
-    createdAt: '2026-03-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-6',
-    name: 'تقرير دراسة السوق الأول',
-    category: 'Business',
-    status: 'Active',
-    owner: 'فريق التسويق',
-    documentDate: '2026-04-01',
-    notes: 'DEMO DATA',
-    createdAt: '2026-04-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-7',
-    name: 'عقد الخدمة السحابية',
-    category: 'Contract',
-    status: 'Expired',
-    owner: 'مدير التقنية',
-    documentDate: '2025-09-01',
-    expiryDate: inDays(-10),
-    notes: 'DEMO DATA — منتهي الصلاحية',
-    createdAt: '2025-09-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'doc-8',
-    name: 'وثيقة هيكل الملكية',
-    category: 'Funding',
-    status: 'Active',
-    owner: 'المؤسس',
-    documentDate: '2026-01-01',
-    notes: 'DEMO DATA',
-    createdAt: '2026-01-01T00:00:00Z',
-    updatedAt: now,
-  },
-];
+function serializeDocument(data: NewDocumentRecord | Partial<DocumentRecord>): Record<string, any> {
+  const { owner, notes, ...rest } = data as any;
+  const meta: Record<string, string> = {};
+  if (owner) meta.owner = owner;
+
+  const hasMeta = Object.keys(meta).length > 0;
+  const serializedNotes = hasMeta
+    ? `${notes ?? ''}${META_SEPARATOR}${JSON.stringify(meta)}`
+    : (notes ?? '');
+
+  return { ...rest, notes: serializedNotes };
+}
+
+function deserializeDocument(row: any): DocumentRecord {
+  const raw = row.notes ?? '';
+  const sepIdx = raw.indexOf(META_SEPARATOR);
+  let notes = raw;
+  let meta: Record<string, string> = {};
+
+  if (sepIdx !== -1) {
+    notes = raw.slice(0, sepIdx);
+    try { meta = JSON.parse(raw.slice(sepIdx + META_SEPARATOR.length)); } catch {}
+  }
+
+  return {
+    ...row,
+    notes,
+    owner: meta.owner ?? undefined,
+  } as DocumentRecord;
+}
 
 export function computeDocumentStatus(d: DocumentRecord): DocumentRecord {
   if (!d.expiryDate || d.status === 'Archived' || d.status === 'Missing') return d;
@@ -111,32 +42,64 @@ export function computeDocumentStatus(d: DocumentRecord): DocumentRecord {
   return d;
 }
 
-export const documentService = {
-  getAll: (): Promise<DocumentRecord[]> =>
-    Promise.resolve(documents.map(computeDocumentStatus)),
+class DocumentService {
+  private async getCompanyId() {
+    if (!supabase) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
 
-  create: (data: NewDocumentRecord): Promise<DocumentRecord> => {
-    const item: DocumentRecord = {
-      ...data,
-      id: `doc-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    documents = [...documents, item];
-    return Promise.resolve(item);
-  },
+  async getAll(): Promise<DocumentRecord[]> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('documents').select('*').eq('company_id', company_id);
+    if (error) throw error;
+    return (data ?? []).map(deserializeDocument).map(computeDocumentStatus);
+  }
 
-  update: (id: string, patch: Partial<DocumentRecord>): Promise<DocumentRecord> => {
-    documents = documents.map(d =>
-      d.id === id ? { ...d, ...patch, updatedAt: new Date().toISOString() } : d
-    );
-    const found = documents.find(d => d.id === id);
-    if (!found) return Promise.reject(new Error('Not found'));
-    return Promise.resolve(computeDocumentStatus(found));
-  },
+  async create(data: NewDocumentRecord): Promise<DocumentRecord> {
+    const company_id = await this.getCompanyId();
+    const payload = serializeDocument(data);
+    const { data: result, error } = await supabase!.from('documents').insert([{ ...payload, company_id }]).select().single();
+    if (error) throw error;
+    return computeDocumentStatus(deserializeDocument(result));
+  }
 
-  delete: (id: string): Promise<void> => {
-    documents = documents.filter(d => d.id !== id);
-    return Promise.resolve();
-  },
-};
+  async update(id: string, patch: Partial<DocumentRecord>): Promise<DocumentRecord> {
+    const company_id = await this.getCompanyId();
+    const current = await this.getById(id);
+    if (!current) throw new Error('Document not found');
+
+    const merged = { ...current, ...patch };
+    const payload = serializeDocument(merged);
+
+    const { data, error } = await supabase!.from('documents').update(payload).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return computeDocumentStatus(deserializeDocument(data));
+  }
+
+  async getById(id: string): Promise<DocumentRecord | null> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('documents').select('*').eq('id', id).eq('company_id', company_id).single();
+    if (error) return null;
+    return deserializeDocument(data);
+  }
+
+  async delete(id: string): Promise<void> {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('documents').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
+  }
+}
+
+export const documentService = new DocumentService();

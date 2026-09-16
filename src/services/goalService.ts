@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Goal } from '../types/goal';
-import { demoGoals } from '../data/demo/goals';
-
 
 class GoalService {
 
@@ -21,7 +19,6 @@ class GoalService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
 
   async getAll(): Promise<Goal[]>  {
     const company_id = await this.getCompanyId();

@@ -1,86 +1,38 @@
 import { supabase } from '../lib/supabase';
-// ============================================================
-// SERVICE: contractService.ts — Phase 6
-// DEMO DATA only. No legal records.
-// ============================================================
 import { ContractRecord, NewContractRecord } from '../types/governance';
 
-const now = new Date().toISOString();
-const today = new Date();
-const inDays = (d: number) => new Date(today.getTime() + d * 86400000).toISOString().split('T')[0];
+const META_SEPARATOR = '\n---HARAKA_META---\n';
 
-let contracts: ContractRecord[] = [
-  {
-    id: 'cnt-1',
-    name: 'اتفاقية الانضمام لبرنامج الحاضنة',
-    counterparty: 'هيئة الحاضنة',
-    type: 'School',
-    startDate: '2026-01-15',
-    endDate: inDays(120),
-    value: 0,
-    status: 'Active',
-    owner: 'المؤسس',
-    notes: 'DEMO DATA',
-    createdAt: '2026-01-15T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'cnt-2',
-    name: 'عقد استشارات تقنية',
-    counterparty: 'شركة التقنية للاستشارات',
-    type: 'Service',
-    startDate: '2026-04-01',
-    endDate: inDays(20),
-    value: 150000,
-    status: 'Expiring',
-    owner: 'مدير التقنية',
-    notes: 'DEMO DATA — يقترب من الانتهاء',
-    createdAt: '2026-04-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'cnt-3',
-    name: 'اتفاقية التعاون مع الشريك الاستراتيجي',
-    counterparty: 'شركة الشريك',
-    type: 'Partner',
-    startDate: '2026-03-01',
-    endDate: inDays(-20),
-    value: 0,
-    status: 'Expired',
-    owner: 'المؤسس',
-    notes: 'DEMO DATA — منتهية',
-    createdAt: '2026-03-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'cnt-4',
-    name: 'اتفاقية الخدمات السحابية',
-    counterparty: 'مزود السحابة',
-    type: 'Supplier',
-    startDate: '2026-06-01',
-    endDate: inDays(180),
-    value: 60000,
-    status: 'Active',
-    owner: 'مدير التقنية',
-    notes: 'DEMO DATA',
-    createdAt: '2026-06-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'cnt-5',
-    name: 'عقد التصميم الجرافيكي',
-    counterparty: 'استوديو التصميم',
-    type: 'Service',
-    startDate: '2026-07-01',
-    endDate: inDays(60),
-    value: 40000,
-    status: 'Active',
-    owner: 'فريق التسويق',
-    notes: 'DEMO DATA',
-    createdAt: '2026-07-01T00:00:00Z',
-    updatedAt: now,
-  },
-];
+function serializeContract(data: NewContractRecord | Partial<ContractRecord>): Record<string, any> {
+  const { owner, notes, ...rest } = data as any;
+  const meta: Record<string, string> = {};
+  if (owner) meta.owner = owner;
+
+  const hasMeta = Object.keys(meta).length > 0;
+  const serializedNotes = hasMeta
+    ? `${notes ?? ''}${META_SEPARATOR}${JSON.stringify(meta)}`
+    : (notes ?? '');
+
+  return { ...rest, notes: serializedNotes };
+}
+
+function deserializeContract(row: any): ContractRecord {
+  const raw = row.notes ?? '';
+  const sepIdx = raw.indexOf(META_SEPARATOR);
+  let notes = raw;
+  let meta: Record<string, string> = {};
+
+  if (sepIdx !== -1) {
+    notes = raw.slice(0, sepIdx);
+    try { meta = JSON.parse(raw.slice(sepIdx + META_SEPARATOR.length)); } catch {}
+  }
+
+  return {
+    ...row,
+    notes,
+    owner: meta.owner ?? undefined,
+  } as ContractRecord;
+}
 
 export function computeContractStatus(c: ContractRecord): ContractRecord {
   if (c.status === 'Terminated' || c.status === 'Draft') return c;
@@ -92,32 +44,64 @@ export function computeContractStatus(c: ContractRecord): ContractRecord {
   return { ...c, status: 'Active' };
 }
 
-export const contractService = {
-  getAll: (): Promise<ContractRecord[]> =>
-    Promise.resolve(contracts.map(computeContractStatus)),
+class ContractService {
+  private async getCompanyId() {
+    if (!supabase) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
 
-  create: (data: NewContractRecord): Promise<ContractRecord> => {
-    const item: ContractRecord = {
-      ...data,
-      id: `cnt-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    contracts = [...contracts, item];
-    return Promise.resolve(item);
-  },
+  async getAll(): Promise<ContractRecord[]> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('contracts').select('*').eq('company_id', company_id);
+    if (error) throw error;
+    return (data ?? []).map(deserializeContract).map(computeContractStatus);
+  }
 
-  update: (id: string, patch: Partial<ContractRecord>): Promise<ContractRecord> => {
-    contracts = contracts.map(c =>
-      c.id === id ? { ...c, ...patch, updatedAt: new Date().toISOString() } : c
-    );
-    const found = contracts.find(c => c.id === id);
-    if (!found) return Promise.reject(new Error('Not found'));
-    return Promise.resolve(computeContractStatus(found));
-  },
+  async create(data: NewContractRecord): Promise<ContractRecord> {
+    const company_id = await this.getCompanyId();
+    const payload = serializeContract(data);
+    const { data: result, error } = await supabase!.from('contracts').insert([{ ...payload, company_id }]).select().single();
+    if (error) throw error;
+    return computeContractStatus(deserializeContract(result));
+  }
 
-  delete: (id: string): Promise<void> => {
-    contracts = contracts.filter(c => c.id !== id);
-    return Promise.resolve();
-  },
-};
+  async update(id: string, patch: Partial<ContractRecord>): Promise<ContractRecord> {
+    const company_id = await this.getCompanyId();
+    const current = await this.getById(id);
+    if (!current) throw new Error('Contract not found');
+
+    const merged = { ...current, ...patch };
+    const payload = serializeContract(merged);
+
+    const { data, error } = await supabase!.from('contracts').update(payload).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return computeContractStatus(deserializeContract(data));
+  }
+
+  async getById(id: string): Promise<ContractRecord | null> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('contracts').select('*').eq('id', id).eq('company_id', company_id).single();
+    if (error) return null;
+    return deserializeContract(data);
+  }
+
+  async delete(id: string): Promise<void> {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('contracts').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
+  }
+}
+
+export const contractService = new ContractService();

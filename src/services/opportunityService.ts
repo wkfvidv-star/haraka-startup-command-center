@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Opportunity } from '../types/market';
-import { demoOpportunities } from '../data/demo/market';
-
 
 class OpportunityService {
 
@@ -21,13 +19,31 @@ class OpportunityService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
-
   async getAll(): Promise<Opportunity[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('opportunities').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Opportunity, 'id' | 'createdAt' | 'updatedAt'>): Promise<Opportunity>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('opportunities').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Opportunity>): Promise<Opportunity>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('opportunities').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('opportunities').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const opportunityService = new OpportunityService();

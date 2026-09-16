@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Initiative } from '../types/initiative';
-import { demoInitiatives } from '../data/demo/initiatives';
-
 
 class InitiativeService {
 
@@ -21,7 +19,6 @@ class InitiativeService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
 
   async getAll(): Promise<Initiative[]>  {
     const company_id = await this.getCompanyId();

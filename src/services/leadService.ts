@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Lead } from '../types/market';
-import { demoLeads } from '../data/demo/market';
-
 
 class LeadService {
 
@@ -21,13 +19,32 @@ class LeadService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
 
   async getAll(): Promise<Lead[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('leads').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Promise<Lead>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('leads').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Lead>): Promise<Lead>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('leads').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('leads').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const leadService = new LeadService();

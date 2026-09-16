@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom';
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useAppStore } from '../../store';
+import { NotificationCenter } from '../notifications/NotificationCenter';
 
 const pageTitles: Record<string, string> = {
   '/':         'Founder Dashboard',
@@ -44,15 +45,8 @@ export function Topbar() {
           </span>
         )}
 
-        {/* Alerts */}
-        <div className="relative">
-          <Bell className="h-4 w-4 text-muted-foreground" />
-          {overdueCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-              {overdueCount}
-            </span>
-          )}
-        </div>
+        {/* Notifications */}
+        <NotificationCenter />
 
         {/* Demo badge */}
         <span className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">

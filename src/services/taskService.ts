@@ -7,12 +7,14 @@ import { supabase } from '../lib/supabase';
 // This avoids any DB schema changes.
 // ============================================================
 import { Task, NewTask } from '../types/task';
+import { activityService } from './activityService';
+import { notificationService } from './notificationService';
 
 const META_SEPARATOR = '\n---HARAKA_META---\n';
 
 // Serialize extra fields into description
 function serializeTask(data: NewTask | Partial<Task>): Record<string, any> {
-  const { assigner, expectedResult, domain, reviewNotes, description, ...rest } = data as any;
+  const { assigner, expectedResult, domain, reviewNotes, description, projectId, ...rest } = data as any;
   const meta: Record<string, string> = {};
   if (assigner)       meta.assigner = assigner;
   if (expectedResult) meta.expectedResult = expectedResult;
@@ -24,7 +26,11 @@ function serializeTask(data: NewTask | Partial<Task>): Record<string, any> {
     ? `${description ?? ''}${META_SEPARATOR}${JSON.stringify(meta)}`
     : (description ?? '');
 
-  return { ...rest, description: serializedDesc };
+  const payload: Record<string, any> = { ...rest, description: serializedDesc };
+  if (projectId !== undefined) {
+    payload.project_id = projectId;
+  }
+  return payload;
 }
 
 // Deserialize extra fields from description
@@ -39,8 +45,11 @@ function deserializeTask(row: any): Task {
     try { meta = JSON.parse(raw.slice(sepIdx + META_SEPARATOR.length)); } catch {}
   }
 
+  const { project_id, ...rest } = row;
+
   return {
-    ...row,
+    ...rest,
+    projectId: project_id,
     description,
     assigner:       meta.assigner ?? undefined,
     expectedResult: meta.expectedResult ?? undefined,
@@ -67,6 +76,18 @@ class TaskService {
     return members[0].company_id;
   }
 
+  private async resolveProfileIdByName(name: string): Promise<string | null> {
+    if (!name) return null;
+    const { data, error } = await supabase!
+      .from('profiles')
+      .select('id')
+      .ilike('full_name', `%${name}%`)
+      .limit(1)
+      .single();
+    if (error || !data) return null;
+    return data.id;
+  }
+
   async getAll(): Promise<Task[]> {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('tasks').select('*').eq('company_id', company_id);
@@ -90,7 +111,33 @@ class TaskService {
       .select()
       .single();
     if (error) throw error;
-    return deserializeTask(result);
+    
+    const task = deserializeTask(result);
+    
+    // Log activity
+    await activityService.logActivity({
+      entity_type: 'TASK',
+      entity_id: task.id,
+      action_type: 'CREATED',
+      message: `تم إنشاء المهمة: ${task.title}`
+    }).catch(console.error);
+
+    // Send Notification
+    if (task.owner) {
+      const recipientId = await this.resolveProfileIdByName(task.owner);
+      if (recipientId) {
+        await notificationService.createNotification({
+          recipient_id: recipientId,
+          type: 'TASK_ASSIGNED',
+          title: 'مهمة جديدة',
+          message: `تم إسناد مهمة جديدة إليك: ${task.title}`,
+          entity_type: 'TASK',
+          entity_id: task.id
+        }).catch(console.error);
+      }
+    }
+
+    return task;
   }
 
   async update(id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<Task> {
@@ -121,7 +168,34 @@ class TaskService {
       .select()
       .single();
     if (error) throw error;
-    return deserializeTask(data);
+    const task = deserializeTask(data);
+
+    // Log Activity based on status changes if present
+    if (patch.status) {
+      await activityService.logActivity({
+        entity_type: 'TASK',
+        entity_id: task.id,
+        action_type: 'STATUS_CHANGED',
+        message: `تم تغيير حالة المهمة إلى: ${patch.status}`
+      }).catch(console.error);
+
+      // Send Notification to owner if status changed
+      if (task.owner) {
+        const recipientId = await this.resolveProfileIdByName(task.owner);
+        if (recipientId) {
+          await notificationService.createNotification({
+            recipient_id: recipientId,
+            type: 'TASK_UPDATED',
+            title: 'تحديث في المهمة',
+            message: `تم تغيير حالة المهمة '${task.title}' إلى: ${patch.status}`,
+            entity_type: 'TASK',
+            entity_id: task.id
+          }).catch(console.error);
+        }
+      }
+    }
+
+    return task;
   }
 
   async delete(id: string): Promise<void> {

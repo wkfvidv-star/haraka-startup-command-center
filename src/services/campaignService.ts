@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Campaign } from '../types/market';
-import { demoCampaigns } from '../data/demo/market';
-
 
 class CampaignService {
 
@@ -21,13 +19,31 @@ class CampaignService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
-
   async getAll(): Promise<Campaign[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('campaigns').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>): Promise<Campaign>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('campaigns').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Campaign>): Promise<Campaign>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('campaigns').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('campaigns').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const campaignService = new CampaignService();

@@ -598,134 +598,138 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteKPI: async (id) => { await kpiService.deleteKPI(id); set(s => ({ kpis: s.kpis.filter(k => k.id !== id) })); },
 
   createSegment: async (data) => {
-    const item = { ...data, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item = await marketSegmentService.create(data);
     set(s => { const segments = [...s.segments, item]; return { segments, ...recomputeAll({ ...s, segments }) }; });
   },
   updateSegment: async (id, patch) => {
-    set(s => { const segments = s.segments.map(i => i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i); return { segments, ...recomputeAll({ ...s, segments }) }; });
+    const updated = await marketSegmentService.update(id, patch);
+    set(s => { const segments = s.segments.map(i => i.id === id ? updated : i); return { segments, ...recomputeAll({ ...s, segments }) }; });
   },
   deleteSegment: async (id) => {
+    await marketSegmentService.delete(id);
     set(s => { const segments = s.segments.filter(i => i.id !== id); return { segments, ...recomputeAll({ ...s, segments }) }; });
   },
 
   createLead: async (data) => {
-    const item = { ...data, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item = await leadService.create(data);
     set(s => { const leads = [...s.leads, item]; return { leads, ...recomputeAll({ ...s, leads }) }; });
   },
   updateLead: async (id, patch) => {
-    set(s => { const leads = s.leads.map(i => i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i); return { leads, ...recomputeAll({ ...s, leads }) }; });
+    const updated = await leadService.update(id, patch);
+    set(s => { const leads = s.leads.map(i => i.id === id ? updated : i); return { leads, ...recomputeAll({ ...s, leads }) }; });
   },
   deleteLead: async (id) => {
+    await leadService.delete(id);
     set(s => { const leads = s.leads.filter(i => i.id !== id); return { leads, ...recomputeAll({ ...s, leads }) }; });
   },
 
   createOpportunity: async (data) => {
-    const weightedValue = data.estimatedValue * (data.probability / 100);
-    const item = { ...data, weightedValue, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item = await opportunityService.create(data);
     set(s => { const opportunities = [...s.opportunities, item]; return { opportunities, ...recomputeAll({ ...s, opportunities }) }; });
   },
   updateOpportunity: async (id, patch) => {
+    const updated = await opportunityService.update(id, patch);
     set(s => { 
-      const opportunities = s.opportunities.map(i => {
-        if (i.id === id) {
-          const updated = { ...i, ...patch, updatedAt: new Date().toISOString() };
-          updated.weightedValue = updated.estimatedValue * (updated.probability / 100);
-          return updated;
-        }
-        return i;
-      });
+      const opportunities = s.opportunities.map(i => i.id === id ? updated : i);
       return { opportunities, ...recomputeAll({ ...s, opportunities }) };
     });
   },
   deleteOpportunity: async (id) => {
+    await opportunityService.delete(id);
     set(s => { const opportunities = s.opportunities.filter(i => i.id !== id); return { opportunities, ...recomputeAll({ ...s, opportunities }) }; });
   },
 
   createOffer: async (data) => {
-    const item = { ...data, id: Date.now().toString() };
+    const item = await offerService.create(data);
     set(s => { const offers = [...s.offers, item]; return { offers, ...recomputeAll({ ...s, offers }) }; });
   },
   updateOffer: async (id, patch) => {
-    set(s => { const offers = s.offers.map(i => i.id === id ? { ...i, ...patch } : i); return { offers, ...recomputeAll({ ...s, offers }) }; });
+    const updated = await offerService.update(id, patch);
+    set(s => { const offers = s.offers.map(i => i.id === id ? updated : i); return { offers, ...recomputeAll({ ...s, offers }) }; });
   },
   deleteOffer: async (id) => {
+    await offerService.delete(id);
     set(s => { const offers = s.offers.filter(i => i.id !== id); return { offers, ...recomputeAll({ ...s, offers }) }; });
   },
 
   createPilot: async (data) => {
-    const os = (data.participationScore + data.satisfactionScore + data.technicalScore + data.objectiveScore) / 4;
-    const item = { ...data, overallScore: os || 0, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item = await pilotService.create(data);
     set(s => { const pilots = [...s.pilots, item]; return { pilots, ...recomputeAll({ ...s, pilots }) }; });
   },
   updatePilot: async (id, patch) => {
+    const updated = await pilotService.update(id, patch);
     set(s => { 
-      const pilots = s.pilots.map(i => {
-        if (i.id === id) {
-          const u = { ...i, ...patch, updatedAt: new Date().toISOString() };
-          u.overallScore = (u.participationScore + u.satisfactionScore + u.technicalScore + u.objectiveScore) / 4;
-          return u;
-        }
-        return i;
-      });
+      const pilots = s.pilots.map(i => i.id === id ? updated : i);
       return { pilots, ...recomputeAll({ ...s, pilots }) };
     });
   },
   deletePilot: async (id) => {
+    await pilotService.delete(id);
     set(s => { const pilots = s.pilots.filter(i => i.id !== id); return { pilots, ...recomputeAll({ ...s, pilots }) }; });
   },
 
   createCustomer: async (data) => {
-    const item = { ...data, id: Date.now().toString() };
+    const item = await customerService.create(data);
     set(s => { const customers = [...s.customers, item]; return { customers, ...recomputeAll({ ...s, customers }) }; });
   },
   updateCustomer: async (id, patch) => {
-    set(s => { const customers = s.customers.map(i => i.id === id ? { ...i, ...patch } : i); return { customers, ...recomputeAll({ ...s, customers }) }; });
+    const updated = await customerService.update(id, patch);
+    set(s => { const customers = s.customers.map(i => i.id === id ? updated : i); return { customers, ...recomputeAll({ ...s, customers }) }; });
   },
   deleteCustomer: async (id) => {
+    await customerService.delete(id);
     set(s => { const customers = s.customers.filter(i => i.id !== id); return { customers, ...recomputeAll({ ...s, customers }) }; });
   },
 
   createCampaign: async (data) => {
-    const item = { ...data, id: Date.now().toString() };
+    const item = await campaignService.create(data);
     set(s => { const campaigns = [...s.campaigns, item]; return { campaigns, ...recomputeAll({ ...s, campaigns }) }; });
   },
   updateCampaign: async (id, patch) => {
-    set(s => { const campaigns = s.campaigns.map(i => i.id === id ? { ...i, ...patch } : i); return { campaigns, ...recomputeAll({ ...s, campaigns }) }; });
+    const updated = await campaignService.update(id, patch);
+    set(s => { const campaigns = s.campaigns.map(i => i.id === id ? updated : i); return { campaigns, ...recomputeAll({ ...s, campaigns }) }; });
   },
   deleteCampaign: async (id) => {
+    await campaignService.delete(id);
     set(s => { const campaigns = s.campaigns.filter(i => i.id !== id); return { campaigns, ...recomputeAll({ ...s, campaigns }) }; });
   },
 
   createContent: async (data) => {
-    const item = { ...data, id: Date.now().toString() };
+    const item = await contentService.create(data);
     set(s => { const contents = [...s.contents, item]; return { contents, ...recomputeAll({ ...s, contents }) }; });
   },
   updateContent: async (id, patch) => {
-    set(s => { const contents = s.contents.map(i => i.id === id ? { ...i, ...patch } : i); return { contents, ...recomputeAll({ ...s, contents }) }; });
+    const updated = await contentService.update(id, patch);
+    set(s => { const contents = s.contents.map(i => i.id === id ? updated : i); return { contents, ...recomputeAll({ ...s, contents }) }; });
   },
   deleteContent: async (id) => {
+    await contentService.delete(id);
     set(s => { const contents = s.contents.filter(i => i.id !== id); return { contents, ...recomputeAll({ ...s, contents }) }; });
   },
 
   createPartnership: async (data) => {
-    const item = { ...data, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const item = await partnershipService.create(data);
     set(s => { const partnerships = [...s.partnerships, item]; return { partnerships, ...recomputeAll({ ...s, partnerships }) }; });
   },
   updatePartnership: async (id, patch) => {
-    set(s => { const partnerships = s.partnerships.map(i => i.id === id ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i); return { partnerships, ...recomputeAll({ ...s, partnerships }) }; });
+    const updated = await partnershipService.update(id, patch);
+    set(s => { const partnerships = s.partnerships.map(i => i.id === id ? updated : i); return { partnerships, ...recomputeAll({ ...s, partnerships }) }; });
   },
   deletePartnership: async (id) => {
+    await partnershipService.delete(id);
     set(s => { const partnerships = s.partnerships.filter(i => i.id !== id); return { partnerships, ...recomputeAll({ ...s, partnerships }) }; });
   },
 
   createRevenue: async (data) => {
-    const item = { ...data, id: Date.now().toString() };
+    const item = await revenueService.create(data);
     set(s => { const revenues = [...s.revenues, item]; return { revenues, ...recomputeAll({ ...s, revenues }) }; });
   },
   updateRevenue: async (id, patch) => {
-    set(s => { const revenues = s.revenues.map(i => i.id === id ? { ...i, ...patch } : i); return { revenues, ...recomputeAll({ ...s, revenues }) }; });
+    const updated = await revenueService.update(id, patch);
+    set(s => { const revenues = s.revenues.map(i => i.id === id ? updated : i); return { revenues, ...recomputeAll({ ...s, revenues }) }; });
   },
   deleteRevenue: async (id) => {
+    await revenueService.delete(id);
     set(s => { const revenues = s.revenues.filter(i => i.id !== id); return { revenues, ...recomputeAll({ ...s, revenues }) }; });
   },
 
@@ -734,12 +738,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteTeamMember: async (id) => { set(s => { const teamMembers = s.teamMembers.filter(i => i.id !== id); return { teamMembers, ...recomputeAll({ ...s, teamMembers }) }; }); },
 
   createGoal: async (data) => { const item = await goalService.create(data); set(s => { const goals = [...s.goals, item]; return { goals, ...recomputeAll({ ...s, goals }) }; }); },
-  updateGoal: async (id, patch) => { set(s => { const goals = s.goals.map(i => i.id === id ? { ...i, ...patch } : i); return { goals, ...recomputeAll({ ...s, goals }) }; }); },
-  deleteGoal: async (id) => { set(s => { const goals = s.goals.filter(i => i.id !== id); return { goals, ...recomputeAll({ ...s, goals }) }; }); },
+  updateGoal: async (id, patch) => { const updated = await goalService.update(id, patch); set(s => { const goals = s.goals.map(i => i.id === id ? updated : i); return { goals, ...recomputeAll({ ...s, goals }) }; }); },
+  deleteGoal: async (id) => { await goalService.delete(id); set(s => { const goals = s.goals.filter(i => i.id !== id); return { goals, ...recomputeAll({ ...s, goals }) }; }); },
 
   createInitiative: async (data) => { const item = await initiativeService.create(data); set(s => { const initiatives = [...s.initiatives, item]; return { initiatives, ...recomputeAll({ ...s, initiatives }) }; }); },
-  updateInitiative: async (id, patch) => { set(s => { const initiatives = s.initiatives.map(i => i.id === id ? { ...i, ...patch } : i); return { initiatives, ...recomputeAll({ ...s, initiatives }) }; }); },
-  deleteInitiative: async (id) => { set(s => { const initiatives = s.initiatives.filter(i => i.id !== id); return { initiatives, ...recomputeAll({ ...s, initiatives }) }; }); },
+  updateInitiative: async (id, patch) => { const updated = await initiativeService.update(id, patch); set(s => { const initiatives = s.initiatives.map(i => i.id === id ? updated : i); return { initiatives, ...recomputeAll({ ...s, initiatives }) }; }); },
+  deleteInitiative: async (id) => { await initiativeService.delete(id); set(s => { const initiatives = s.initiatives.filter(i => i.id !== id); return { initiatives, ...recomputeAll({ ...s, initiatives }) }; }); },
 
   createGrowthTarget: async (data) => { const item = await growthService.create(data); set(s => { const growthTargets = [...s.growthTargets, item]; return { growthTargets, ...recomputeAll({ ...s, growthTargets }) }; }); },
   updateGrowthTarget: async (id, patch) => { set(s => { const growthTargets = s.growthTargets.map(i => i.id === id ? { ...i, ...patch } : i); return { growthTargets, ...recomputeAll({ ...s, growthTargets }) }; }); },

@@ -1,120 +1,38 @@
 import { supabase } from '../lib/supabase';
-// ============================================================
-// SERVICE: obligationService.ts — Phase 6
-// All data is DEMO DATA.
-// ============================================================
 import { Obligation, NewObligation } from '../types/governance';
 
-const now = new Date().toISOString();
-const today = new Date();
-const inDays = (d: number) => new Date(today.getTime() + d * 86400000).toISOString().split('T')[0];
+const META_SEPARATOR = '\n---HARAKA_META---\n';
 
-let obligations: Obligation[] = [
-  {
-    id: 'obl-1',
-    title: 'تقديم تقرير الحاضنة الفصلي',
-    description: 'تقرير شهري لمتابعة التقدم مع هيئة الحاضنة — DEMO DATA',
-    type: 'Incubation',
-    priority: 'Critical',
-    dueDate: inDays(3),
-    owner: 'المؤسس',
-    status: 'Pending',
-    notes: 'DEMO DATA',
-    createdAt: '2026-08-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-2',
-    title: 'تجديد سجل الشركة',
-    description: 'تجديد الوثائق القانونية الرسمية للشركة — DEMO DATA',
-    type: 'Administrative',
-    priority: 'High',
-    dueDate: inDays(12),
-    owner: 'المؤسس',
-    status: 'In Progress',
-    notes: 'DEMO DATA',
-    createdAt: '2026-08-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-3',
-    title: 'تسليم ملف الفريق للحاضنة',
-    description: 'تحديث بيانات أعضاء الفريق في منصة الحاضنة — DEMO DATA',
-    type: 'Incubation',
-    priority: 'Medium',
-    dueDate: inDays(20),
-    owner: 'مدير الفريق',
-    status: 'Pending',
-    notes: 'DEMO DATA',
-    createdAt: '2026-08-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-4',
-    title: 'تقرير استخدام منحة الحاضنة',
-    description: 'تقرير مالي تفصيلي عن استخدام المنحة المالية — DEMO DATA',
-    type: 'Financial',
-    priority: 'Critical',
-    dueDate: inDays(-5), // Overdue
-    owner: 'المؤسس',
-    status: 'Overdue',
-    notes: 'DEMO DATA',
-    createdAt: '2026-07-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-5',
-    title: 'توقيع اتفاقية الشراكة الاستراتيجية',
-    description: 'إتمام الاتفاقية مع الشريك الاستراتيجي الرئيسي — DEMO DATA',
-    type: 'Contractual',
-    priority: 'High',
-    dueDate: inDays(6),
-    owner: 'المؤسس',
-    status: 'Pending',
-    notes: 'DEMO DATA',
-    createdAt: '2026-08-15T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-6',
-    title: 'تحديث خطة العمل للمرحلة الثانية',
-    description: 'مراجعة وتحديث خطة العمل الاستراتيجية — DEMO DATA',
-    type: 'Strategic',
-    priority: 'Medium',
-    dueDate: inDays(30),
-    owner: 'المؤسس',
-    status: 'In Progress',
-    notes: 'DEMO DATA',
-    createdAt: '2026-09-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-7',
-    title: 'تسجيل العلامة التجارية',
-    description: 'تقديم طلب تسجيل العلامة التجارية HARAKA — DEMO DATA',
-    type: 'Legal',
-    priority: 'High',
-    dueDate: inDays(-15), // Overdue
-    owner: 'المؤسس',
-    status: 'Overdue',
-    notes: 'DEMO DATA',
-    createdAt: '2026-06-01T00:00:00Z',
-    updatedAt: now,
-  },
-  {
-    id: 'obl-8',
-    title: 'توثيق الكود المصدري',
-    description: 'توثيق قاعدة الكود لحماية الملكية الفكرية — DEMO DATA',
-    type: 'Legal',
-    priority: 'Low',
-    dueDate: inDays(45),
-    owner: 'مدير التقنية',
-    status: 'Completed',
-    notes: 'DEMO DATA',
-    createdAt: '2026-07-01T00:00:00Z',
-    updatedAt: now,
-  },
-];
+function serializeObligation(data: NewObligation | Partial<Obligation>): Record<string, any> {
+  const { owner, notes, ...rest } = data as any;
+  const meta: Record<string, string> = {};
+  if (owner) meta.owner = owner;
+
+  const hasMeta = Object.keys(meta).length > 0;
+  const serializedNotes = hasMeta
+    ? `${notes ?? ''}${META_SEPARATOR}${JSON.stringify(meta)}`
+    : (notes ?? '');
+
+  return { ...rest, notes: serializedNotes };
+}
+
+function deserializeObligation(row: any): Obligation {
+  const raw = row.notes ?? '';
+  const sepIdx = raw.indexOf(META_SEPARATOR);
+  let notes = raw;
+  let meta: Record<string, string> = {};
+
+  if (sepIdx !== -1) {
+    notes = raw.slice(0, sepIdx);
+    try { meta = JSON.parse(raw.slice(sepIdx + META_SEPARATOR.length)); } catch {}
+  }
+
+  return {
+    ...row,
+    notes,
+    owner: meta.owner ?? undefined,
+  } as Obligation;
+}
 
 export function computeObligationStatus(o: Obligation): Obligation {
   if (o.status === 'Completed' || o.status === 'Cancelled') return o;
@@ -124,32 +42,64 @@ export function computeObligationStatus(o: Obligation): Obligation {
   return o;
 }
 
-export const obligationService = {
-  getAll: (): Promise<Obligation[]> =>
-    Promise.resolve(obligations.map(computeObligationStatus)),
+class ObligationService {
+  private async getCompanyId() {
+    if (!supabase) throw new Error('Not authenticated');
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    
+    const { data: members, error } = await supabase
+      .from('company_members')
+      .select('company_id')
+      .eq('status', 'Active')
+      .limit(1);
+      
+    if (error || !members || members.length === 0) {
+      throw new Error('No active company found for user');
+    }
+    return members[0].company_id;
+  }
 
-  create: (data: NewObligation): Promise<Obligation> => {
-    const item: Obligation = {
-      ...data,
-      id: `obl-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    obligations = [...obligations, item];
-    return Promise.resolve(item);
-  },
+  async getAll(): Promise<Obligation[]> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('obligations').select('*').eq('company_id', company_id);
+    if (error) throw error;
+    return (data ?? []).map(deserializeObligation).map(computeObligationStatus);
+  }
 
-  update: (id: string, patch: Partial<Obligation>): Promise<Obligation> => {
-    obligations = obligations.map(o =>
-      o.id === id ? { ...o, ...patch, updatedAt: new Date().toISOString() } : o
-    );
-    const found = obligations.find(o => o.id === id);
-    if (!found) return Promise.reject(new Error('Not found'));
-    return Promise.resolve(computeObligationStatus(found));
-  },
+  async create(data: NewObligation): Promise<Obligation> {
+    const company_id = await this.getCompanyId();
+    const payload = serializeObligation(data);
+    const { data: result, error } = await supabase!.from('obligations').insert([{ ...payload, company_id }]).select().single();
+    if (error) throw error;
+    return computeObligationStatus(deserializeObligation(result));
+  }
 
-  delete: (id: string): Promise<void> => {
-    obligations = obligations.filter(o => o.id !== id);
-    return Promise.resolve();
-  },
-};
+  async update(id: string, patch: Partial<Obligation>): Promise<Obligation> {
+    const company_id = await this.getCompanyId();
+    const current = await this.getById(id);
+    if (!current) throw new Error('Obligation not found');
+
+    const merged = { ...current, ...patch };
+    const payload = serializeObligation(merged);
+
+    const { data, error } = await supabase!.from('obligations').update(payload).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return computeObligationStatus(deserializeObligation(data));
+  }
+
+  async getById(id: string): Promise<Obligation | null> {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('obligations').select('*').eq('id', id).eq('company_id', company_id).single();
+    if (error) return null;
+    return deserializeObligation(data);
+  }
+
+  async delete(id: string): Promise<void> {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('obligations').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
+  }
+}
+
+export const obligationService = new ObligationService();

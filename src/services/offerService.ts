@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Offer } from '../types/market';
-import { demoOffers } from '../data/demo/market';
-
 
 class OfferService {
 
@@ -21,13 +19,31 @@ class OfferService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
-
   async getAll(): Promise<Offer[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('offers').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Offer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Offer>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('offers').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Offer>): Promise<Offer>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('offers').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('offers').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const offerService = new OfferService();

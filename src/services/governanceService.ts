@@ -11,29 +11,74 @@ import { ContractRecord } from '../types/governance';
 import { IPAsset } from '../types/governance';
 import { Meeting } from '../types/governance';
 
-const now = new Date().toISOString();
-const today = new Date();
-const inDays = (d: number) => new Date(today.getTime() + d * 86400000).toISOString().split('T')[0];
-
-let profile: GovernanceProfile = {
-  id: 'gov-profile-1',
-  companyStage: 'Pre-Seed — مرحلة الحاضنة',
-  legalStatus: 'شركة ناشئة مسجلة — DEMO DATA',
-  incubationStatus: 'نشط في برنامج الحاضنة',
-  startupStatus: 'قيد التطوير والإطلاق',
-  currentStrategicPhase: 'Phase 3 — Market & Revenue Engine',
-  founderCount: 2,
-  importantNotes: 'جميع البيانات تجريبية (DEMO DATA). لا تمثل وثائق قانونية رسمية.',
-  nextGovernanceReviewDate: inDays(30),
-  createdAt: '2026-01-01T00:00:00Z',
-  updatedAt: now,
-};
+async function getCompanyId(): Promise<string> {
+  const { data: { session } } = await supabase!.auth.getSession();
+  if (!session) throw new Error('Not authenticated');
+  const { data: members, error } = await supabase!
+    .from('company_members')
+    .select('company_id')
+    .eq('status', 'Active')
+    .limit(1);
+  if (error || !members || members.length === 0) throw new Error('No active company found for user');
+  return members[0].company_id;
+}
 
 export const governanceService = {
-  getProfile: (): Promise<GovernanceProfile> => Promise.resolve(profile),
-  updateProfile: (patch: Partial<GovernanceProfile>): Promise<GovernanceProfile> => {
-    profile = { ...profile, ...patch, updatedAt: new Date().toISOString() };
-    return Promise.resolve(profile);
+  getProfile: async (): Promise<GovernanceProfile> => {
+    const company_id = await getCompanyId();
+    const { data, error } = await supabase!
+      .from('governance_profiles')
+      .select('*')
+      .eq('company_id', company_id)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      // Return a default profile — no record yet
+      return {
+        id: '',
+        companyStage: '',
+        legalStatus: '',
+        incubationStatus: '',
+        startupStatus: '',
+        currentStrategicPhase: '',
+        founderCount: 0,
+        importantNotes: '',
+        nextGovernanceReviewDate: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return data as GovernanceProfile;
+  },
+  updateProfile: async (patch: Partial<GovernanceProfile>): Promise<GovernanceProfile> => {
+    const company_id = await getCompanyId();
+    const { data: existing } = await supabase!
+      .from('governance_profiles')
+      .select('id')
+      .eq('company_id', company_id)
+      .maybeSingle();
+
+    let result;
+    if (existing?.id) {
+      const { data, error } = await supabase!
+        .from('governance_profiles')
+        .update(patch)
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await supabase!
+        .from('governance_profiles')
+        .insert([{ ...patch, company_id }])
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    }
+    return result as GovernanceProfile;
   },
 };
 

@@ -12,6 +12,8 @@ import { Modal } from '../components/ui/modal';
 import { Input, Textarea, Select, Label } from '../components/ui/form';
 import { Plus, Pencil, Trash2, CheckSquare, Clock, AlertCircle, Eye, CheckCircle, RefreshCw } from 'lucide-react';
 import { format, isPast } from 'date-fns';
+import { FileUploader } from '../components/shared/FileUploader';
+import { ActivityLog } from '../components/shared/ActivityLog';
 
 const ALL_STATUSES: TaskStatus[] = [
   'جديدة', 'تم الاستلام', 'قيد التنفيذ', 'تنتظر المراجعة', 'تحتاج تعديلاً', 'مكتملة'
@@ -120,7 +122,15 @@ export function Tasks() {
     } else {
       await createTask(data);
     }
-    setModalOpen(false);
+    // We do NOT close the modal immediately if it's an edit, so they can upload files.
+    // But since they might expect it to close, we can close it for creates, 
+    // and for edits maybe show a success toast but keep it open to manage files.
+    if (!editingTask) {
+      setModalOpen(false);
+    } else {
+      // Just update local state to avoid UI jump
+      setEditingTask({ ...editingTask, ...data } as Task);
+    }
   };
 
   // Assignee advances status one step
@@ -410,6 +420,13 @@ export function Tasks() {
             <Button variant="outline" onClick={() => setModalOpen(false)}>إلغاء</Button>
             <Button onClick={handleSave}>{editingTask ? 'حفظ التعديلات' : 'إنشاء المهمة'}</Button>
           </div>
+
+          {editingTask && (
+            <div className="pt-4 mt-4 border-t border-slate-800 space-y-6">
+              <FileUploader entityType="TASK" entityId={editingTask.id} />
+              <ActivityLog entityType="TASK" entityId={editingTask.id} />
+            </div>
+          )}
         </div>
       </Modal>
 

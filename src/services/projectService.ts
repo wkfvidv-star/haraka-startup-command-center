@@ -6,8 +6,6 @@ import { supabase } from '../lib/supabase';
 // ============================================================
 import { Project, NewProject } from '../types/project';
 import { Task } from '../types/task';
-import { demoProjects } from '../data/demo';
-
 
 
 class ProjectService {
@@ -28,7 +26,6 @@ class ProjectService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
 
   async getAll(): Promise<Project[]>  {
     const company_id = await this.getCompanyId();
@@ -38,8 +35,10 @@ class ProjectService {
   }
 
   async getById(id: string): Promise<Project | null> {
-    await delay();
-    return structuredClone(this.store.find((p) => p.id === id) ?? null);
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('projects').select('*').eq('id', id).eq('company_id', company_id).single();
+    if (error) return null;
+    return data;
   }
 
   async create(data: NewProject): Promise<Project>  {

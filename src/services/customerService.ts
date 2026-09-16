@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Customer } from '../types/market';
-import { demoCustomers } from '../data/demo/market';
-
 
 class CustomerService {
 
@@ -21,13 +19,31 @@ class CustomerService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
-
   async getAll(): Promise<Customer[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('customers').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Customer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Customer>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('customers').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Customer>): Promise<Customer>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('customers').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('customers').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const customerService = new CustomerService();

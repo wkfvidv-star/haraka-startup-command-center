@@ -1,7 +1,5 @@
 import { supabase } from '../lib/supabase';
 import { Content } from '../types/market';
-import { demoContent } from '../data/demo/market';
-
 
 class ContentService {
 
@@ -21,13 +19,31 @@ class ContentService {
     }
     return members[0].company_id;
   }
-  private store: any[] = [];
-
   async getAll(): Promise<Content[]>  {
     const company_id = await this.getCompanyId();
     const { data, error } = await supabase!.from('content').select('*').eq('company_id', company_id);
     if (error) throw error;
     return data;
+  }
+
+  async create(data: Omit<Content, 'id' | 'createdAt' | 'updatedAt'>): Promise<Content>  {
+    const company_id = await this.getCompanyId();
+    const { data: result, error } = await supabase!.from('content').insert([{ ...data, company_id }]).select().single();
+    if (error) throw error;
+    return result;
+  }
+
+  async update(id: string, patch: Partial<Content>): Promise<Content>  {
+    const company_id = await this.getCompanyId();
+    const { data, error } = await supabase!.from('content').update(patch).eq('id', id).eq('company_id', company_id).select().single();
+    if (error) throw error;
+    return data;
+  }
+
+  async delete(id: string): Promise<void>  {
+    const company_id = await this.getCompanyId();
+    const { error } = await supabase!.from('content').delete().eq('id', id).eq('company_id', company_id);
+    if (error) throw error;
   }
 }
 export const contentService = new ContentService();
