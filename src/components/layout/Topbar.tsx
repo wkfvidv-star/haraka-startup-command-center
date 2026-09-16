@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, Menu } from 'lucide-react';
 import { useAppStore } from '../../store';
 
 const pageTitles: Record<string, string> = {
@@ -13,7 +13,7 @@ const pageTitles: Record<string, string> = {
 
 export function Topbar() {
   const { pathname } = useLocation();
-  const { tasks, config } = useAppStore();
+  const { tasks, config, setMobileMenuOpen } = useAppStore();
 
   const overdueCount = tasks.filter(
     (t) => t.status !== 'مكتملة' && new Date(t.deadline) < new Date()
@@ -22,9 +22,18 @@ export function Topbar() {
   const title = pageTitles[pathname] ?? 'HARAKA';
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-6">
-      {/* Page title */}
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b bg-card px-4 md:px-6">
+      <div className="flex items-center gap-3">
+        {/* Hamburger Menu (Mobile only) */}
+        <button 
+          onClick={() => setMobileMenuOpen(true)}
+          className="md:hidden p-1.5 -mr-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        {/* Page title */}
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      </div>
 
       {/* Right side */}
       <div className="flex items-center gap-4">

@@ -319,6 +319,7 @@ export function Sidebar() {
                 <Link
                   key={`${r.path}-${group.group}`}
                   to={r.path}
+                  onClick={() => useAppStore.getState().setMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-sm font-medium ${
                     isActive
                       ? 'bg-primary/15 text-primary border border-primary/20'

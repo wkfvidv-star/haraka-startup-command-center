@@ -109,7 +109,7 @@ export function FounderWorkspace() {
       </Card>
 
       {/* === حالة الشركة السريعة === */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card>
           <CardContent className="pt-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -132,7 +132,7 @@ export function FounderWorkspace() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="sm:col-span-2 md:col-span-1">
           <CardContent className="pt-5 flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
               <AlertCircle className="w-5 h-5 text-red-400" />

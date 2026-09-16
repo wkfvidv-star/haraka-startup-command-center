@@ -98,6 +98,10 @@ interface AppState {
   activeCompanyId: string | null;
   currentUserRole: SystemRole;
   currentMember: TeamMember | null;
+  
+  isMobileMenuOpen: boolean;
+  setMobileMenuOpen: (isOpen: boolean) => void;
+
   reset: () => void;
   tasks: Task[];
   projects: Project[];
@@ -428,6 +432,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       companyHealth: null, teamPerformances: [],
     });
   },
+
+  isMobileMenuOpen: false,
+  setMobileMenuOpen: (isOpen: boolean) => set({ isMobileMenuOpen: isOpen }),
 
   tasks: [], projects: [], config: null, ceoNextMove: null,
   products: [], launchCategories: [], launchBlockers: [], incubationPhase: null,
