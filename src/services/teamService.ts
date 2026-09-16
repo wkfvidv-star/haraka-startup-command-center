@@ -1,7 +1,8 @@
 
-import { TeamMember } from '../types/team';
+import { TeamMember, TeamRole, TeamStatus } from '../types/team';
 import { demoTeamMembers } from '../data/demo/team';
 import { delay } from './delay';
+import { supabase } from '../lib/supabase';
 
 class TeamService {
   private async getCompanyId() {
@@ -23,27 +24,32 @@ class TeamService {
 
   async getAll(): Promise<TeamMember[]> {
     const company_id = await this.getCompanyId();
-    const { data, error } = await supabase!.from('profiles').select('*'); // Team is mapped to profiles usually, but for app logic it might be company_members joined with profiles. Let's assume company_members is sufficient for now, or just return empty for demo if they don't have team_members table.
     // In HARAKA, team is usually managed via `company_members` joined with `profiles`. 
     // For simplicity matching the interface, we'll query profiles of people in company_members.
     const { data: mems } = await supabase!.from('company_members').select('profile_id, role, status').eq('company_id', company_id);
     if (!mems || mems.length === 0) return [];
-    const profileIds = mems.map(m => m.profile_id);
+    const profileIds = mems.map((m: any) => m.profile_id);
     
     const { data: profiles, error: err } = await supabase!.from('profiles').select('*').in('id', profileIds);
     if (err) throw err;
     
-    return (profiles ?? []).map(p => {
-      const m = mems.find(x => x.profile_id === p.id);
+    return (profiles ?? []).map((p: any) => {
+      const m = mems.find((x: any) => x.profile_id === p.id);
       return {
         id: p.id,
         name: p.full_name ?? '',
-        role: m?.role ?? '',
-        department: '',
+        role: (m?.role ?? 'Other') as TeamRole,
+        department: 'Other',
         email: p.email ?? '',
-        status: m?.status === 'Active' ? 'Active' : 'Inactive',
-        joinDate: p.created_at
-      } as TeamMember;
+        phone: '',
+        status: (m?.status === 'Active' ? 'Active' : 'Inactive') as TeamStatus,
+        joinedAt: p.created_at,
+        responsibilities: '',
+        skills: '',
+        notes: '',
+        createdAt: p.created_at,
+        updatedAt: p.updated_at
+      } as unknown as TeamMember;
     });
   }
 
