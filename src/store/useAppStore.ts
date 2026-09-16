@@ -451,29 +451,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   init: async () => {
-    // Check if demo mode is active (role selected from RoleSelector)
     // ── DEMO MODE: role selected from RoleSelector ───────────────────
+    // If a role was selected, skip ALL Supabase auth and return immediately.
     const savedRole = localStorage.getItem('haraka_demo_role') as any;
     const savedMember = localStorage.getItem('haraka_demo_member');
     if (savedRole && savedMember) {
       try {
         const member = JSON.parse(savedMember);
-        set({ currentUserRole: savedRole, currentMember: member });
-      } catch {}
-      // Still load Supabase data if available, but don't block on auth
+        set({ currentUserRole: savedRole, currentMember: member, isLoading: false, error: null });
+      } catch {
+        set({ currentUserRole: savedRole, isLoading: false });
+      }
+      // In demo mode: do NOT touch Supabase at all — return now.
+      return;
     }
 
+    // ── SUPABASE AUTH MODE ────────────────────────────────────────────
     set({ isLoading: true, error: null });
     try {
       if (!supabase) throw new Error('Supabase client not found');
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
-        // In demo mode, don't reset — just stop loading
-        if (savedRole) {
-          set({ isLoading: false });
-          return;
-        }
         get().reset();
         set({ isLoading: false, currentUserRole: 'GUEST', currentMember: null });
         return;
