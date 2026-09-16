@@ -83,7 +83,7 @@ export function Projects() {
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {projects.map(proj => {
           const projTasks = tasks.filter(t => t.projectId === proj.id);
-          const doneTasks = projTasks.filter(t => t.status === 'Done');
+          const doneTasks = projTasks.filter(t => t.status === 'مكتملة');
           return (
             <Card key={proj.id} className="flex flex-col hover:border-primary/40 transition-colors">
               <CardHeader className="pb-3 flex flex-row items-start justify-between gap-4">

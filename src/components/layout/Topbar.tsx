@@ -16,7 +16,7 @@ export function Topbar() {
   const { tasks, config } = useAppStore();
 
   const overdueCount = tasks.filter(
-    (t) => t.status !== 'Done' && new Date(t.deadline) < new Date()
+    (t) => t.status !== 'مكتملة' && new Date(t.deadline) < new Date()
   ).length;
 
   const title = pageTitles[pathname] ?? 'HARAKA';

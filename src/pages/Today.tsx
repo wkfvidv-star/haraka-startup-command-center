@@ -8,25 +8,25 @@ export function Today() {
   const { tasks, launchBlockers, risks, deliverables } = useAppStore();
 
   // 1. Critical (Overdue P0, Critical Blockers, Critical Risks)
-  const criticalTasks = tasks.filter(t => t.status !== 'Done' && (t.priority === 'P0 (Critical)' || t.priority === 'P1 (High)') && isPast(new Date(t.deadline)));
+  const criticalTasks = tasks.filter(t => t.status !== 'مكتملة' && (t.priority === 'حرجة' || t.priority === 'عالية') && isPast(new Date(t.deadline)));
   const criticalBlockers = launchBlockers.filter(b => b.status !== 'Resolved' && b.severity === 'Critical');
   const criticalRisks = risks.filter(r => r.status === 'Open' && r.severity === 'Critical');
 
   // 2. High Priority (Due today or High priority not yet due but urgent)
-  const highPriorityTasks = tasks.filter(t => t.status !== 'Done' && (t.priority === 'P1 (High)') && !isPast(new Date(t.deadline)) && (isToday(new Date(t.deadline)) || isTomorrow(new Date(t.deadline))));
+  const highPriorityTasks = tasks.filter(t => t.status !== 'مكتملة' && (t.priority === 'عالية') && !isPast(new Date(t.deadline)) && (isToday(new Date(t.deadline)) || isTomorrow(new Date(t.deadline))));
 
   // 3. Due Today
-  const dueTodayTasks = tasks.filter(t => t.status !== 'Done' && t.priority !== 'P0 (Critical)' && t.priority !== 'P1 (High)' && isToday(new Date(t.deadline)));
+  const dueTodayTasks = tasks.filter(t => t.status !== 'مكتملة' && t.priority !== 'حرجة' && t.priority !== 'عالية' && isToday(new Date(t.deadline)));
   const dueTodayDeliverables = deliverables.filter(d => d.status !== 'Completed' && isToday(new Date(d.dueDate)));
 
   // 4. Blocked
-  const blockedTasks = tasks.filter(t => t.status === 'Blocked');
+  const blockedTasks = tasks.filter(t => t.status === 'تحتاج تعديلاً');
   
   // 5. Next Actions (In Progress or selected next tasks)
-  const nextActions = tasks.filter(t => t.status === 'In Progress');
+  const nextActions = tasks.filter(t => t.status === 'قيد التنفيذ');
 
   // 6. Upcoming (Due tomorrow or soon)
-  const upcomingTasks = tasks.filter(t => t.status !== 'Done' && isFuture(new Date(t.deadline)) && !isToday(new Date(t.deadline))).slice(0, 5);
+  const upcomingTasks = tasks.filter(t => t.status !== 'مكتملة' && isFuture(new Date(t.deadline)) && !isToday(new Date(t.deadline))).slice(0, 5);
 
   return (
     <div className="space-y-6 max-w-screen-xl">

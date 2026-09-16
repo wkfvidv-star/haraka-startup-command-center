@@ -26,11 +26,11 @@ export function getMemberPerformance(
   const memberTasks = tasks.filter(t => t.owner === member.name); // Using name as owner for simplicity in demo
   
   const assignedTasks = memberTasks.length;
-  const completedTasks = memberTasks.filter(t => t.status === 'Done').length;
-  const blockedTasks = memberTasks.filter(t => t.status === 'Blocked').length;
-  const overdueTasks = memberTasks.filter(t => t.status !== 'Done' && isPast(new Date(t.deadline))).length;
+  const completedTasks = memberTasks.filter(t => t.status === 'مكتملة').length;
+  const blockedTasks = memberTasks.filter(t => t.status === 'تحتاج تعديلاً').length;
+  const overdueTasks = memberTasks.filter(t => t.status !== 'مكتملة' && isPast(new Date(t.deadline))).length;
   
-  const activeTasks = memberTasks.filter(t => t.status === 'Todo' || t.status === 'In Progress' || t.status === 'Blocked').length;
+  const activeTasks = memberTasks.filter(t => t.status === 'جديدة' || t.status === 'تم الاستلام' || t.status === 'قيد التنفيذ' || t.status === 'تحتاج تعديلاً').length;
   const activeProjects = projects.filter(p => p.owner === member.name && p.status === 'Active').length;
 
   return {

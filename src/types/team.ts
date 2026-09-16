@@ -1,3 +1,5 @@
+export type SystemRole = 'FOUNDER' | 'LEADERSHIP' | 'SCIENTIFIC' | 'TECH' | 'LEGAL' | 'GUEST';
+
 export type TeamRole = 
   | 'Founder'
   | 'Management'

@@ -69,7 +69,7 @@ class ProjectService {
   async recomputeProgress(projectId: string, tasks: Task[]): Promise<Project | null> {
     const projectTasks = tasks.filter((t) => t.projectId === projectId);
     if (projectTasks.length === 0) return null;
-    const done = projectTasks.filter((t) => t.status === 'Done').length;
+    const done = projectTasks.filter((t) => t.status === 'مكتملة').length;
     const progress = Math.round((done / projectTasks.length) * 100);
     return this.update(projectId, { progress });
   }

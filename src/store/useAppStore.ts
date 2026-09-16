@@ -14,7 +14,7 @@ import {
   Customer, Campaign, Content, Partnership, Revenue, MarketKPIs 
 } from '../types/market';
 
-import { TeamMember } from '../types/team';
+import { TeamMember, SystemRole } from '../types/team';
 import { Goal } from '../types/goal';
 import { Initiative } from '../types/initiative';
 import { GrowthTarget } from '../types/growth';
@@ -96,6 +96,8 @@ interface AppState {
   session: any | null;
   user: any | null;
   activeCompanyId: string | null;
+  currentUserRole: SystemRole;
+  currentMember: TeamMember | null;
   reset: () => void;
   tasks: Task[];
   projects: Project[];
@@ -157,6 +159,7 @@ interface AppState {
   error: string | null;
 
   init: () => Promise<void>;
+  setDemoRole: (role: SystemRole, member: TeamMember) => void;
 
   createTask: (data: NewTask) => Promise<void>;
   updateTask: (id: string, patch: Partial<Task>) => Promise<void>;
@@ -271,7 +274,7 @@ function recomputeAll(s: Partial<AppState>): Partial<AppState> {
   const updatedProjects = projects.map(p => {
     const pTasks = tasks.filter(t => t.projectId === p.id);
     if (pTasks.length === 0) return p;
-    const completed = pTasks.filter(t => t.status === 'Done').length;
+    const completed = pTasks.filter(t => t.status === 'مكتملة').length;
     const progress = Math.round((completed / pTasks.length) * 100);
     return { ...p, progress };
   });
@@ -406,10 +409,12 @@ function recomputeAll(s: Partial<AppState>): Partial<AppState> {
 
 export const useAppStore = create<AppState>((set, get) => ({
   session: null, user: null, activeCompanyId: null,
+  currentUserRole: 'GUEST', currentMember: null,
   
   reset: () => {
     set({
       session: null, user: null, activeCompanyId: null,
+      currentUserRole: 'GUEST', currentMember: null,
       tasks: [], projects: [], config: null, ceoNextMove: null,
       products: [], launchCategories: [], launchBlockers: [], incubationPhase: null,
       deliverables: [], meetings: [], expenses: [], risks: [], decisions: [], kpis: [],
@@ -439,15 +444,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   companyHealth: null, teamPerformances: [],
   isLoading: false, error: null,
 
+  setDemoRole: (role, member) => {
+    set({ currentUserRole: role, currentMember: member });
+    localStorage.setItem('haraka_demo_role', role);
+    localStorage.setItem('haraka_demo_member', JSON.stringify(member));
+  },
+
   init: async () => {
+    // Check if demo mode is active (role selected from RoleSelector)
+    // ── DEMO MODE: role selected from RoleSelector ───────────────────
+    const savedRole = localStorage.getItem('haraka_demo_role') as any;
+    const savedMember = localStorage.getItem('haraka_demo_member');
+    if (savedRole && savedMember) {
+      try {
+        const member = JSON.parse(savedMember);
+        set({ currentUserRole: savedRole, currentMember: member });
+      } catch {}
+      // Still load Supabase data if available, but don't block on auth
+    }
+
     set({ isLoading: true, error: null });
     try {
       if (!supabase) throw new Error('Supabase client not found');
       
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
+        // In demo mode, don't reset — just stop loading
+        if (savedRole) {
+          set({ isLoading: false });
+          return;
+        }
         get().reset();
-        set({ isLoading: false });
+        set({ isLoading: false, currentUserRole: 'GUEST', currentMember: null });
         return;
       }
       
@@ -487,8 +515,33 @@ export const useAppStore = create<AppState>((set, get) => ({
         contractService.getAll(), ipService.getAll(), govMeetingService.getAll()
       ]);
 
+      const currentUserEmail = session.user?.email || '';
+      const currentMember = teamMembers.find(m => m.email === currentUserEmail) || null;
+      let currentUserRole: SystemRole = 'GUEST';
+
+      if (currentMember) {
+        const name = currentMember.name.toLowerCase();
+        if (name.includes('abdelbasset') || name.includes('عبد الباسط')) currentUserRole = 'FOUNDER';
+        else if (name.includes('riyad') || name.includes('نصير رياض') || name.includes('رياض')) currentUserRole = 'LEADERSHIP';
+        else if (name.includes('hocine') || name.includes('حسين') || name.includes('djabellah') || name.includes('جاب الله')) currentUserRole = 'SCIENTIFIC';
+        else if (name.includes('hadj mokhtar') || name.includes('حاج مختار')) currentUserRole = 'SCIENTIFIC';
+        else if (name.includes('hamma') || name.includes('حمة') || name.includes('soltani')) currentUserRole = 'TECH';
+        else if (name.includes('youssef') || name.includes('يوسف')) currentUserRole = 'LEGAL';
+      }
+
+      // If no member found but it's a test environment or fallback, you can do direct email mapping here
+      if (!currentMember) {
+        const email = currentUserEmail.toLowerCase();
+        if (email.includes('abdelbasset')) currentUserRole = 'FOUNDER';
+        else if (email.includes('riyad')) currentUserRole = 'LEADERSHIP';
+        else if (email.includes('hocine') || email.includes('mokhtar')) currentUserRole = 'SCIENTIFIC';
+        else if (email.includes('hamma')) currentUserRole = 'TECH';
+        else if (email.includes('youssef')) currentUserRole = 'LEGAL';
+      }
+
       const state = {
         session, user: session.user, activeCompanyId,
+        currentUserRole, currentMember,
         tasks, projects, config, products, launchCategories, launchBlockers, 
         incubationPhase: incPhase, deliverables, meetings, expenses, risks, decisions, kpis,
         segments, leads, opportunities, offers, pilots, customers, campaigns, contents, partnerships, revenues,

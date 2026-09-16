@@ -28,9 +28,9 @@ export function computeHealthScore(
     ? (config.budgetSpentDZD / config.fundingReceivedDZD) * 100
     : 0;
 
-  const overdueTasks = tasks.filter(t => t.status !== 'Done' && isPast(new Date(t.deadline)));
-  const blockedTasks = tasks.filter(t => t.status === 'Blocked');
-  const criticalOverdue = overdueTasks.filter(t => t.priority === 'P0 (Critical)');
+  const overdueTasks = tasks.filter(t => t.status !== 'مكتملة' && isPast(new Date(t.deadline)));
+  const blockedTasks = tasks.filter(t => t.status === 'تحتاج تعديلاً');
+  const criticalOverdue = overdueTasks.filter(t => t.priority === 'حرجة');
 
   const openLaunchBlockers = launchBlockers.filter(b => b.status !== 'Resolved');
   const criticalLaunchBlockers = openLaunchBlockers.filter(b => b.severity === 'Critical');
@@ -131,7 +131,7 @@ export function computeCeoNextMove(
   governanceSignals: GovernanceSignal[] = []
 ): CeoNextMove {
   const budgetPct = config.fundingReceivedDZD > 0 ? (config.budgetSpentDZD / config.fundingReceivedDZD) * 100 : 0;
-  const criticalOverdue = tasks.filter(t => t.priority === 'P0 (Critical)' && t.status !== 'Done' && isPast(new Date(t.deadline)));
+  const criticalOverdue = tasks.filter(t => t.priority === 'حرجة' && t.status !== 'مكتملة' && isPast(new Date(t.deadline)));
   const openLaunchBlockers = launchBlockers.filter(b => b.status !== 'Resolved' && b.severity === 'Critical');
   const openCriticalRisks = risks.filter(r => r.status === 'Open' && r.severity === 'Critical');
   
@@ -271,7 +271,7 @@ export function computeCeoNextMove(
     risk = 'مخالفات قانونية أو تنظيمية تهدد استمرارية المشروع.';
   }
   // ── P2 & P3: Overdue & Warnings (Phase 2) ───────────────────
-  else if (tasks.some(t => t.priority === 'P1 (High)' && t.status !== 'Done' && isPast(new Date(t.deadline)))) {
+  else if (tasks.some(t => t.priority === 'عالية' && t.status !== 'مكتملة' && isPast(new Date(t.deadline)))) {
     priority1 = 'إنجاز المهام المتأخرة ذات الأولوية العالية.';
     priority2 = 'مراجعة توزيع المهام على الفريق.';
     decision = 'تصفية المهام المتراكمة قبل البدء في مشاريع جديدة.';

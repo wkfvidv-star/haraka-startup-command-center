@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useAppStore } from '../../store';
+import { UserGuide } from '../workspace/UserGuide';
 
 export function Layout() {
   const init = useAppStore((s) => s.init);
@@ -12,6 +13,7 @@ export function Layout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
+      <UserGuide />
       <Sidebar />
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <Topbar />

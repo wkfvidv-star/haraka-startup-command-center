@@ -3,6 +3,7 @@ import { Layout } from './components/layout/Layout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Onboarding } from './pages/Onboarding';
+import { RoleSelector } from './pages/RoleSelector';
 
 import { Dashboard } from './pages/Dashboard';
 import { Today } from './pages/Today';
@@ -51,11 +52,13 @@ import { Obligations } from './pages/Obligations';
 import { Documents } from './pages/Documents';
 import { ContractsIP } from './pages/ContractsIP';
 import { Meetings } from './pages/Meetings';
+import { CompanyProfile } from './pages/CompanyProfile';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/select-role" element={<RoleSelector />} />
         <Route path="/login" element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
         
@@ -108,6 +111,8 @@ function App() {
             <Route path="meetings" element={<Meetings />} />
             
             <Route path="incubation" element={<Incubation />} />
+            
+            <Route path="company-profile" element={<CompanyProfile />} />
           </Route>
         </Route>
         
